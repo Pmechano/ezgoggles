@@ -13,7 +13,6 @@ from ..context import Context, Watcher
 from ..launch import pidfile
 from ..paths import Paths
 from ..user import User, load_user, save_user
-from .art import Nameplate
 from .panels import PANELS, Panel
 from .setup import SetupScreen
 from .theme import THEME, THEMES
@@ -39,19 +38,12 @@ class MainScreen(Screen):
     def compose(self) -> ComposeResult:
         self._bind_keys()
         with Horizontal(id="topbar"):
-            yield Static(f"[b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
+            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
             yield Static("", id="status")
         yield Static("", id="notice")
         with Horizontal(id="body"):
             for column, side in (("main", False), ("side", True)):
                 with VerticalScroll(id=column, classes="col"):
-                    if side:
-                        yield Nameplate(
-                            ("ezgoggles", "brand"),
-                            (self.gapp.paths.root.name, "line"),
-                            (self.t("setup.subtitle"), "muted"),
-                            id="nameplate",
-                        )
                     for i, panel in enumerate(PANELS):
                         if panel.side == side:
                             yield self._section(i, panel)
@@ -79,10 +71,7 @@ class MainScreen(Screen):
         self._layout(event.size.width)
 
     def _layout(self, width: int) -> None:
-        self.set_class(width < NARROW, "narrow")
         self.query_one("#body").set_class(width < NARROW, "narrow")
-        if self.ctx is not None:
-            self._apply_step()
 
     # ----- data -----
 
@@ -121,12 +110,8 @@ class MainScreen(Screen):
             self.query_one(f"#sec-{i}").display = i < step
             self.query_one(f"#sec-{i}").set_class(current, "current")
             self.query_one(f"#ack-{i}").display = current
-        # Wide screens always show the side column, with the nameplate on top.
-        # Narrow screens drop the nameplate and show the side column only when needed.
-        narrow = self.has_class("narrow")
-        side_open = any(p.side for p in PANELS[:step])
-        self.query_one("#side").display = side_open or not narrow
-        self.query_one("#nameplate").display = not narrow
+        for column, side in (("#main", False), ("#side", True)):
+            self.query_one(column).display = any(p.side == side for p in PANELS[:step])
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         bid = event.button.id or ""
@@ -153,15 +138,12 @@ class GogglesApp(App):
     Screen { background: $background; }
 
     #topbar { height: 1; padding: 0 2; background: $panel; border-bottom: none; }
-    #brand { width: auto; display: none; }
-    MainScreen.narrow #brand { display: block; }
+    #brand { width: auto; }
     #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
     #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
 
     #body { height: 1fr; padding: 1 1 0 1; }
-    .col { height: 100%; padding: 0 1; scrollbar-size-vertical: 1; }
-    #main { width: 3fr; }
-    #side { width: 2fr; }
+    .col { width: 1fr; height: 100%; padding: 0 1; scrollbar-size-vertical: 1; }
     #body.narrow { layout: vertical; overflow-y: auto; scrollbar-size-vertical: 1; }
     #body.narrow > .col { width: 100%; height: auto; overflow-y: hidden; }
 

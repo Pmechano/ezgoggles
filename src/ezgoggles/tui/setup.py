@@ -12,7 +12,6 @@ from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Static
 
 from .. import i18n
 from ..user import MODES, NAME_RE, THEMES, User
-from .art import Nameplate
 from .theme import THEME
 
 
@@ -54,11 +53,8 @@ class SetupScreen(Screen[User]):
     def compose(self) -> ComposeResult:
         d = self.draft
         with VerticalScroll(id="setup"):
-            yield Nameplate(
-                ("ezgoggles", "brand"),
-                (self.t("setup.title"), "line"),
-                (self.t("setup.subtitle"), "muted"),
-            )
+            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.t('setup.title')}[/]", classes="title")
+            yield Static(self.t("setup.subtitle"), classes="subtitle")
             yield Label(self.t("setup.language"), classes="field")
             with RadioSet(id="language", classes="row"):
                 for code in self.languages:

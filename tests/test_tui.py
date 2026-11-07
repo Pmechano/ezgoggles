@@ -93,8 +93,7 @@ async def test_first_start_shows_setup_then_steps(project):
 
         s = app.screen
         assert s.query_one("#sec-0").display and not s.query_one("#sec-1").display
-        assert s.query_one("#nameplate").display  # wide screen: the side column holds the nameplate
-        assert not s.query_one(f"#sec-{len(PANELS) - 1}").display
+        assert not s.query_one("#side").display
         for i in range(len(PANELS) - 1):
             s.query_one(f"#ack-{i}").press()
             await pilot.pause()
@@ -111,7 +110,6 @@ async def test_activity_tree_and_live_reload(project):
     async with app.run_test(size=(80, 40)) as pilot:
         s = app.screen
         assert s.query_one("#body").has_class("narrow")
-        assert not s.query_one("#nameplate").display
         assert s.query_one("#activity-msg").display
         write_activity(project)
         s.refresh_data()
