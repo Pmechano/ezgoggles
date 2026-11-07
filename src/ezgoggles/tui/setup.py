@@ -22,13 +22,22 @@ class SetupScreen(Screen[User]):
     BINDINGS = [Binding("escape", "cancel", show=False)]
 
     DEFAULT_CSS = """
-    SetupScreen { align: center top; }
-    #setup { width: 100%; max-width: 90; padding: 1 2; }
-    #setup .title { text-style: bold; margin-bottom: 1; }
-    #setup .field { margin-top: 1; text-style: bold; }
+    SetupScreen { align: center middle; }
+    #setup {
+        width: 76; max-width: 100%; height: auto; max-height: 100%;
+        padding: 1 3; border: round $accent; background: transparent;
+    }
+    #setup .title { margin-bottom: 0; }
+    #setup .subtitle { color: $text-muted; margin-bottom: 1; }
+    #setup .field { margin-top: 1; text-style: bold; color: $text-muted; }
     #setup .hint { color: $text-muted; }
-    #setup RadioSet { width: 100%; }
-    #setup #error { color: $error; margin: 1 0; }
+    #setup RadioSet { width: 100%; border: none; background: transparent; padding: 0; }
+    #setup RadioSet:focus { background: $boost; }
+    #setup RadioSet.row { layout: horizontal; }
+    #setup RadioSet.row RadioButton { width: auto; margin-right: 3; }
+    #setup Input { margin: 0; }
+    #setup #error { color: $error; height: auto; margin-top: 1; }
+    #setup #save { margin-top: 1; width: 100%; }
     """
 
     def __init__(self, user: User, first: bool) -> None:
@@ -44,9 +53,10 @@ class SetupScreen(Screen[User]):
     def compose(self) -> ComposeResult:
         d = self.draft
         with VerticalScroll(id="setup"):
-            yield Label(self.t("setup.title"), classes="title")
+            yield Static(f"[b $accent]ezgoggles[/]  [b]{self.t('setup.title')}[/]", classes="title")
+            yield Static(self.t("setup.subtitle"), classes="subtitle")
             yield Label(self.t("setup.language"), classes="field")
-            with RadioSet(id="language"):
+            with RadioSet(id="language", classes="row"):
                 for code in self.languages:
                     yield RadioButton(i18n.language_name(code), value=d.language == code)
             yield Label(self.t("setup.name"), classes="field")
@@ -57,7 +67,7 @@ class SetupScreen(Screen[User]):
                 for mode in MODES:
                     yield RadioButton(self.t(f"setup.mode_{mode}"), value=d.mode == mode)
             yield Label(self.t("setup.theme"), classes="field")
-            with RadioSet(id="theme"):
+            with RadioSet(id="theme", classes="row"):
                 for theme in THEMES:
                     yield RadioButton(self.t(f"setup.theme_{theme}"), value=d.theme == theme)
             yield Static("", id="error")

@@ -8,6 +8,7 @@ order = 1
 
 [setup]
 title = "设置"
+subtitle = "看清你们的小组项目"
 language = "语言"
 name = "名字"
 name_hint = "小写字母、数字或 -，例如 alice。会用在分支名里。"
@@ -72,4 +73,8 @@ handoff = "交接变化"
 
 [status]
 branch = "分支"
-changed = "未提交的文件"
+changed = "{n} 个文件未提交"
+
+[keys]
+settings = "设置"
+quit = "退出"

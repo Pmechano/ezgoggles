@@ -9,7 +9,7 @@ from ezgoggles.model import fingerprint
 from ezgoggles.tui.panels.requirements import RequirementsPanel
 from ezgoggles.tui.app import GogglesApp, MainScreen
 from ezgoggles.tui.panels import PANELS
-from ezgoggles.tui.panels.project_map import MapPanel
+from ezgoggles.tui.panels.project_map import MapPanel, flow_markup
 from ezgoggles.tui.panels.stage import StagePanel
 from ezgoggles.tui.setup import SetupScreen
 from ezgoggles.user import User, load_user, save_user
@@ -23,10 +23,11 @@ def test_map_markdown_whole_first(project):
     shuffled = dict(MAP, stages=[MAP["stages"][2], MAP["stages"][0], MAP["stages"][1]])
     project.map.write_text(json.dumps(shuffled, ensure_ascii=False), encoding="utf-8")
     ctx = load_context(project, User(name="alice", mode="learn"), "alice/model")
+    flow = flow_markup(ctx)
+    assert flow.index("数据清洗") < flow.index("需求预测") < flow.index("报告")
+    assert "[b reverse $accent] 需求预测 [/]" in flow  # the user's stage stands out
     md = MapPanel.markdown(ctx)
-    lines = md.splitlines()
-    assert lines[0].startswith("**共享单车需求预测**")  # the goal comes first
-    assert "**数据清洗 → 需求预测 → 报告**" in md  # then the whole flow
+    assert md.splitlines()[0] == "- **数据清洗**：去掉异常记录，补齐缺失时段"
     assert "- **需求预测**  ← 你：训练模型，预测下周需求" in md
     assert "src/" not in md  # paths are for agents
 
@@ -125,7 +126,7 @@ async def test_language_switch(project):
     save_user(project, User(name="bob", mode="deliver", language="en"))
     app = GogglesApp(project)
     async with app.run_test(size=(140, 45)) as pilot:
-        assert app.screen.query_one("#sec-0").title == "1 · Requirements"
+        assert app.screen.query_one("#sec-0").title == "1  Requirements"
         await pilot.press("s")
         await pilot.pause()
         app.screen.query_one("#language").query("RadioButton").first().value = True
@@ -133,7 +134,7 @@ async def test_language_switch(project):
         await pilot.click("#save")
         await pilot.pause()
         await pilot.pause()
-        assert app.screen.query_one("#sec-0").title == "1 · 任务要求"
+        assert app.screen.query_one("#sec-0").title == "1  任务要求"
 
 
 async def test_missing_map_message(project):

@@ -66,7 +66,8 @@ class ActivityPanel(Panel):
 
     DEFAULT_CSS = """
     ActivityPanel #activity-msg { padding: 0 1; color: $text-muted; }
-    ActivityPanel Tree { height: auto; max-height: 100%; }
+    ActivityPanel Tree { height: auto; max-height: 100%; background: transparent; padding: 0 1; }
+    ActivityPanel Tree > .tree--guides { color: $foreground 25%; }
     """
 
     def compose(self):

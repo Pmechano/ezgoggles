@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingsMap
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Collapsible, Footer, Static
@@ -23,11 +23,6 @@ POLL = 1.0  # seconds
 class MainScreen(Screen):
     """Shows the panels of PANELS, opened one by one. Knows nothing about what a panel shows."""
 
-    BINDINGS = [
-        Binding("s", "settings", "Settings / 设置"),
-        Binding("ctrl+q", "app.quit", "Quit / 退出"),
-    ]
-
     def __init__(self) -> None:
         super().__init__()
         self.ctx: Context | None = None
@@ -36,21 +31,34 @@ class MainScreen(Screen):
     def gapp(self) -> "GogglesApp":
         return self.app  # type: ignore[return-value]
 
+    def t(self, key: str, **kw: str) -> str:
+        return i18n.tr(self.gapp.user.language, key, **kw)
+
     def compose(self) -> ComposeResult:
-        user = self.gapp.user
-        yield Static("", id="status")
+        self._bind_keys()
+        with Horizontal(id="topbar"):
+            yield Static(f"[b $accent]ezgoggles[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
+            yield Static("", id="status")
         yield Static("", id="notice")
         with Horizontal(id="body"):
             for column, side in (("main", False), ("side", True)):
                 with VerticalScroll(id=column, classes="col"):
                     for i, panel in enumerate(PANELS):
                         if panel.side == side:
-                            yield self._section(i, panel, user)
+                            yield self._section(i, panel)
         yield Footer()
 
-    def _section(self, i: int, panel: type[Panel], user: User) -> Collapsible:
-        title = f"{i + 1} · {i18n.tr(user.language, f'panel.{panel.key}')}"
-        ack = Button(i18n.tr(user.language, "panel.ack"), id=f"ack-{i}", classes="ack")
+    def _bind_keys(self) -> None:
+        """Footer labels in the user's language."""
+        self._bindings = BindingsMap([
+            Binding("s", "settings", self.t("keys.settings")),
+            Binding("ctrl+q", "app.quit", self.t("keys.quit")),
+        ])
+        self.refresh_bindings()
+
+    def _section(self, i: int, panel: type[Panel]) -> Collapsible:
+        title = f"{i + 1}  {self.t(f'panel.{panel.key}')}"
+        ack = Button(f"✓ {self.t('panel.ack')}", id=f"ack-{i}", classes="ack", compact=True, flat=True)
         return Collapsible(panel(id=f"panel-{panel.key}"), ack, title=title, collapsed=False, id=f"sec-{i}")
 
     def on_mount(self) -> None:
@@ -77,12 +85,12 @@ class MainScreen(Screen):
         self._apply_step()
 
     def _render_status(self, ctx: Context) -> None:
-        parts = [ctx.user.name, ctx.t(f"mode.{ctx.user.mode}")]
+        parts = [f"[b]{ctx.user.name}[/]", ctx.t(f"mode.{ctx.user.mode}")]
         if ctx.branch:
-            parts.append(f"{ctx.t('status.branch')}: {ctx.branch}")
-        if ctx.changed is not None:
-            parts.append(f"{ctx.t('status.changed')}: {ctx.changed}")
-        self.query_one("#status", Static).update("  ·  ".join(parts))
+            parts.append(f"{ctx.t('status.branch')} {ctx.branch}")
+        if ctx.changed:
+            parts.append(ctx.t("status.changed", n=str(ctx.changed)))
+        self.query_one("#status", Static).update("  [$text-muted]·[/]  ".join(parts))
         notice = self.query_one("#notice", Static)
         notice.display = ctx.translation in ("missing", "stale", "invalid")
         if notice.display:
@@ -95,9 +103,12 @@ class MainScreen(Screen):
 
     def _apply_step(self) -> None:
         step = self._step()
-        for i, panel in enumerate(PANELS):
+        last = len(PANELS) - 1
+        for i in range(len(PANELS)):
+            current = i == step - 1 and i < last
             self.query_one(f"#sec-{i}").display = i < step
-            self.query_one(f"#ack-{i}").display = i == step - 1 and i < len(PANELS) - 1
+            self.query_one(f"#sec-{i}").set_class(current, "current")
+            self.query_one(f"#ack-{i}").display = current
         for column, side in (("#main", False), ("#side", True)):
             self.query_one(column).display = any(p.side == side for p in PANELS[:step])
 
@@ -120,16 +131,37 @@ class MainScreen(Screen):
 
 
 class GogglesApp(App):
+    ENABLE_COMMAND_PALETTE = False
+
     CSS = """
-    #status { height: 1; padding: 0 1; background: $panel; color: $text-muted; }
-    #notice { padding: 0 1; background: $warning-muted; color: $text; }
-    #body { height: 1fr; }
-    .col { width: 1fr; height: 100%; padding: 0 1; }
-    #body.narrow { layout: vertical; overflow-y: auto; }
+    Screen { background: $background; }
+
+    #topbar { height: 1; padding: 0 2; background: $panel; }
+    #brand { width: auto; }
+    #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
+    #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
+
+    #body { height: 1fr; padding: 1 1 0 1; }
+    .col { width: 1fr; height: 100%; padding: 0 1; scrollbar-size-vertical: 1; }
+    #body.narrow { layout: vertical; overflow-y: auto; scrollbar-size-vertical: 1; }
     #body.narrow > .col { width: 100%; height: auto; overflow-y: hidden; }
-    Collapsible { margin-bottom: 1; }
-    Markdown { height: auto; margin: 0; padding: 0 1; }
-    .ack { margin: 1 0 0 1; }
+
+    Collapsible {
+        background: transparent;
+        border: round $foreground 15%;
+        padding: 0 1 0 0;
+        margin: 0 0 1 0;
+    }
+    Collapsible.current { border: round $accent; }
+    Collapsible > CollapsibleTitle { text-style: bold; padding: 0 1; }
+    Collapsible > Contents { padding: 1 0 0 1; }
+
+    Markdown { height: auto; margin: 0; padding: 0 1; background: transparent; }
+    Button.ack {
+        width: auto; min-width: 0; height: 1; margin: 1 0 1 1; padding: 0 2;
+        border: none; color: $success; background: $success 15%; text-style: bold;
+    }
+    Button.ack:hover, Button.ack:focus { background: $success 30%; text-style: bold; }
     """
 
     def __init__(self, paths: Paths) -> None:
