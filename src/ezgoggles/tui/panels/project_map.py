@@ -15,7 +15,7 @@ def flow_markup(ctx: Context) -> str:
     chips = []
     for s in order:
         name = s["name"].replace("[", r"\[")
-        style = "b reverse $accent" if s["id"] == ctx.mine else "$foreground on $boost"
+        style = "b reverse $accent" if s["id"] == ctx.mine else "$foreground on $panel"
         chips.append(f"[{style}] {name} [/]")
     return " [$text-muted]→[/] ".join(chips)
 

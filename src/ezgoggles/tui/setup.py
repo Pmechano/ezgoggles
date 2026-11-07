@@ -12,8 +12,8 @@ from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Static
 
 from .. import i18n
 from ..user import MODES, NAME_RE, THEMES, User
+from .theme import THEME
 
-THEME = {"dark": "textual-dark", "light": "textual-light"}
 
 
 class SetupScreen(Screen[User]):
@@ -37,7 +37,7 @@ class SetupScreen(Screen[User]):
     #setup RadioSet.row RadioButton { width: auto; margin-right: 3; }
     #setup Input { margin: 0; }
     #setup #error { color: $error; height: auto; margin-top: 1; }
-    #setup #save { margin-top: 1; width: 100%; }
+    #setup #save { margin-top: 1; width: auto; min-width: 0; padding: 0 4; text-style: bold; }
     """
 
     def __init__(self, user: User, first: bool) -> None:
@@ -53,7 +53,7 @@ class SetupScreen(Screen[User]):
     def compose(self) -> ComposeResult:
         d = self.draft
         with VerticalScroll(id="setup"):
-            yield Static(f"[b $accent]ezgoggles[/]  [b]{self.t('setup.title')}[/]", classes="title")
+            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.t('setup.title')}[/]", classes="title")
             yield Static(self.t("setup.subtitle"), classes="subtitle")
             yield Label(self.t("setup.language"), classes="field")
             with RadioSet(id="language", classes="row"):
@@ -71,7 +71,7 @@ class SetupScreen(Screen[User]):
                 for theme in THEMES:
                     yield RadioButton(self.t(f"setup.theme_{theme}"), value=d.theme == theme)
             yield Static("", id="error")
-            yield Button(self.t("setup.save"), variant="primary", id="save")
+            yield Button(self.t("setup.save"), variant="primary", id="save", compact=True)
 
     async def on_radio_set_changed(self, event: RadioSet.Changed) -> None:
         group = event.radio_set.id

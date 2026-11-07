@@ -14,7 +14,8 @@ from ..launch import pidfile
 from ..paths import Paths
 from ..user import User, load_user, save_user
 from .panels import PANELS, Panel
-from .setup import THEME, SetupScreen
+from .setup import SetupScreen
+from .theme import THEME, THEMES
 
 NARROW = 110  # columns; below this the two columns stack into one
 POLL = 1.0  # seconds
@@ -37,7 +38,7 @@ class MainScreen(Screen):
     def compose(self) -> ComposeResult:
         self._bind_keys()
         with Horizontal(id="topbar"):
-            yield Static(f"[b $accent]ezgoggles[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
+            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
             yield Static("", id="status")
         yield Static("", id="notice")
         with Horizontal(id="body"):
@@ -136,7 +137,7 @@ class GogglesApp(App):
     CSS = """
     Screen { background: $background; }
 
-    #topbar { height: 1; padding: 0 2; background: $panel; }
+    #topbar { height: 1; padding: 0 2; background: $panel; border-bottom: none; }
     #brand { width: auto; }
     #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
     #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
@@ -148,12 +149,14 @@ class GogglesApp(App):
 
     Collapsible {
         background: transparent;
-        border: round $foreground 15%;
+        border: round $primary 35%;
         padding: 0 1 0 0;
         margin: 0 0 1 0;
     }
     Collapsible.current { border: round $accent; }
-    Collapsible > CollapsibleTitle { text-style: bold; padding: 0 1; }
+    Collapsible > CollapsibleTitle { text-style: bold; padding: 0 1; color: $primary; }
+    Collapsible.current > CollapsibleTitle { color: $accent; }
+    Collapsible > CollapsibleTitle:hover { background: $primary 15%; color: $accent; }
     Collapsible > Contents { padding: 1 0 0 1; }
 
     Markdown { height: auto; margin: 0; padding: 0 1; background: transparent; }
@@ -172,6 +175,8 @@ class GogglesApp(App):
         self.title = f"ezgoggles - {paths.root.name}"
 
     def on_mount(self) -> None:
+        for theme in THEMES:
+            self.register_theme(theme)
         self.theme = THEME[self.user.theme]
         self.push_screen(MainScreen())
         if not self.user.ready:
