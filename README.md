@@ -59,7 +59,7 @@ uv run --project ezgoggles ezgoggles <命令>
 | `open` | TUI 没有运行时，在新窗口中打开它。支持 Windows、macOS、Ubuntu，以及从 WSL 打开到 Windows 一侧。 |
 | `tui` | 在当前终端中运行 TUI。 |
 | `check` | 校验 `map.json` 和 `activity.json`。 |
-| `init` | 组长初始化：创建 `goggles-data/`，并写入口说明。不会覆盖已有内容。 |
+| `init` | 组长初始化：创建 `goggles-data/`，并写入口说明。只追加内容，不删改已有内容。 |
 
 ## 小组项目中的文件
 

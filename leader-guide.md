@@ -2,9 +2,15 @@
 
 You help the group leader set up a group project for ezgoggles. All members will read the map that you write. Most members will not read the code. Read `agent-guide.md` first: its words and rules also apply to you.
 
+Setup is shared work, so these rules apply:
+
+- Do the setup on `main`. You do not need a stage branch or a plan in `activity.json`.
+- The leader's own TUI setup (name and mode) is personal. Leave it to the leader.
+- Setup is done when `check` prints `OK` and the leader has read the map in the TUI. If the leader is not available, stop after `check` and tell the leader what to review.
+
 ## 1. Add ezgoggles
 
-If `ezgoggles/` does not exist, add it as a git submodule:
+If `ezgoggles/` does not exist, add it as a git submodule. Use a URL that every member can clone, such as the GitHub URL. A local path does not work for members.
 
 ```
 git submodule add <ezgoggles repo url> ezgoggles
@@ -16,7 +22,7 @@ Then run `init`:
 uv run --project ezgoggles ezgoggles init
 ```
 
-`init` makes these changes. It never overwrites a file:
+`init` makes these changes. It only adds text. It never deletes or replaces text:
 
 - It creates `goggles-data/.gitignore`, so git ignores the personal files in `goggles-data/.local/`.
 - It adds the entry line to `README.md` and `AGENTS.md`.
@@ -27,6 +33,10 @@ uv run --project ezgoggles ezgoggles init
 Put the original course materials in `docs/`. Examples: the assignment, the rubric and the data description. Do not edit them. They are the sources for the map.
 
 If some materials are not in the repo, ask the leader for them.
+
+Only official course materials are sources. Old reports, drafts and notes are not requirements.
+
+If the project already has work in it, do not move or rename existing files unless the leader agrees. A stage `path` can point to an existing directory.
 
 ## 3. Design the pipeline with the leader
 
@@ -42,7 +52,7 @@ Recommended structure. Each item has a reason. Change it to fit the course:
 
 | Directory | Reason |
 |---|---|
-| `docs/` | The original course materials. Agents compare their work with these files in every session. |
+| `docs/` | The original course materials. Agents read them when they need the exact wording of a requirement. |
 | One directory for each stage | When a member understands the map, they also understand the directories. Each member's agent stays in its own directory, so merges have fewer conflicts. |
 | `data/` for input data that no stage makes | No stage owns it, so it does not go in a stage directory. |
 
@@ -74,19 +84,19 @@ Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map
 }
 ```
 
-- `requirements.content`: transcribe the requirements and the rubric faithfully. You can change the layout. Do not remove any requirement, any number or any deadline. Members see this text first.
+- `requirements.content`: transcribe the requirements and the rubric faithfully. You can change the layout. Do not remove any requirement, any number or any deadline. Members see this text first. If the materials are incomplete or conflict, do not guess: write the open points under the heading `Open questions` at the end, and tell the leader.
 - `requirements.sources`: list the files that you transcribed.
 - `goal`: one or two sentences.
 - `id`: lowercase ASCII. Members' branch names use it.
-- `input` and `output`: describe the handoff exactly enough for the next stage to use it.
+- `input` and `output`: describe the handoff exactly enough for the next stage to use it. If a handoff file is too big for git, write where members get it.
 - `detail`: how the stage works inside, and why. Only learning mode shows it.
-- Write in the language of the course materials.
+- Write in the language of the course materials. The TUI language setting changes only the interface. It does not translate the map.
 
-Then run `check` until it prints `OK`. Run `open`, and ask the leader to read the map in the TUI.
+Then run `check` until it prints `OK`. `check` validates only the structure. It does not check that the transcription is faithful, so compare it with the originals yourself. Then run `open`, and ask the leader to read the map in the TUI.
 
 ## 6. Publish
 
-Commit these files and push them to the group's GitHub organization repo:
+Commit these files and push them to the group's GitHub organization repo. If there is no remote yet, commit locally and tell the leader to add one.
 
 - `docs/`
 - `goggles-data/map.json` and `goggles-data/.gitignore`

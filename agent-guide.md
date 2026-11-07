@@ -5,9 +5,9 @@ You work in a student group project. ezgoggles helps every member understand the
 ## Words
 
 - **Map**: `goggles-data/map.json`. It shows the project pipeline: the stages, the input and output of each stage, and the handoffs between stages. The leader owns the map.
-- **Stage**: one step of the pipeline. A stage is also a direction: one member takes it.
+- **Stage**: one step of the pipeline. A stage is also a direction. Usually one member takes one stage. A member can take more than one stage, with one branch for each.
 - **Handoff**: what a stage takes from the stages before it, and what it gives to the stages after it.
-- **TUI**: a terminal window that shows the map and your plans to the user. It only reads files. You never control it.
+- **TUI**: a terminal window that shows the map and your plans to the user. It does not change project files. It writes only the user's personal settings in `goggles-data/.local/`. You never control it.
 
 ## Commands
 
@@ -21,11 +21,16 @@ uv run --project ezgoggles ezgoggles <command>
 |---|---|
 | `open` | Start the TUI if it is not running. It prints the state of the map, the user and the branch. |
 | `check` | Validate `map.json` and `activity.json`. Run it after each write to `goggles-data/`. |
+| `tui` | Run the TUI in the current terminal. The user can run it by hand when no window opens. |
 | `init` | Leader setup only. See `leader-guide.md`. |
 
-If `uv` is not installed, ask the user to install it: https://docs.astral.sh/uv/getting-started/installation/
+All commands accept `--root <dir>` when you do not run them from the project root.
+
+If the shell does not find `uv`, try `python -m uv`. If that also fails, ask the user to install uv: https://docs.astral.sh/uv/getting-started/installation/
 
 ## Start of each session
+
+If you set up the project for the leader, follow `leader-guide.md`. The steps in this section do not apply to that setup.
 
 1. Run `open`. Read its output.
    - `setup is not finished`: ask the user to finish the setup page in the TUI window. Then run `open` again.
@@ -61,7 +66,7 @@ The TUI shows this file to the user as a tree: stage → plan → items. The fil
 ```
 
 - Add a new plan for each piece of work. Put it under the stage id. Keep the old plans.
-- A plan has 3 to 7 items. Each item is one step that the user can understand.
+- Aim for 3 to 7 items in a plan. `check` rejects more than 9. Each item is one step that the user can understand.
 - When you finish an item, set `done` to `true`.
 - When the work ends, write `summary` and `handoffChange`.
 - Schema: `ezgoggles/src/ezgoggles/schema/activity.schema.json`.
@@ -96,6 +101,8 @@ The user selects the mode in the TUI. Read it from `user.json`.
 
 The user can ask you about the project. Answer with the map in mind: tell the user which stage the answer is about and which handoff it touches.
 
+The map is a transcription and can contain errors. If a question needs the exact wording of a requirement, read the original file in `docs/`.
+
 ## Writing style
 
 Text for people must be easy to read. This includes plans, summaries, handoff changes and answers. The TUI shows plans and summaries directly to the user. Use the rules of ASD-STE100 (Simplified Technical English):
@@ -107,7 +114,7 @@ Text for people must be easy to read. This includes plans, summaries, handoff ch
 - Use lists for complex content. Do not write long sentences.
 - In Chinese: do not use empty verbs like "进行" or "实施". Do not chain many "的".
 
-The full rules are in `ezgoggles/ASD-STE100.md`. Write in the user's `language`: `zh` is Chinese and `en` is English.
+A Chinese summary of the rules is in `ezgoggles/ASD-STE100.md`. Read it when you need more detail. Write in the user's `language`: `zh` is Chinese and `en` is English.
 
 ## Files
 
