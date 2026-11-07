@@ -83,7 +83,7 @@ async def test_language_switch(project):
         await pilot.pause()
         setup = app.screen
         setup.query_one("#language").query("RadioButton").first().value = True
-        await pilot.pause()
+        await pilot.pause(0.3)  # let the setup page recompose in the new language
         await pilot.click("#save")
         await pilot.pause()
         await pilot.pause()
