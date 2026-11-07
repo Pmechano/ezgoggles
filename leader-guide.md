@@ -88,7 +88,7 @@ Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map
 - `requirements.sources`: list the files that you transcribed.
 - `goal`: one or two sentences.
 - `id`: lowercase ASCII. Members' branch names use it.
-- `input` and `output`: describe the handoff exactly enough for the next stage to use it. If a handoff file is too big for git, write where members get it.
+- `input` and `output`: one short line each, so that a member understands the handoff at a glance. Name the file or the object, and where it is. Put exact formats (columns, fields, function signatures) in a file in the stage directory, and name that file here. If a handoff file is too big for git, write where members get it.
 - `detail`: how the stage works inside, and why. Only learning mode shows it.
 - Write in the language of the course materials. The TUI language setting changes only the interface. It does not translate the map.
 
