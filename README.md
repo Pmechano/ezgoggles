@@ -83,3 +83,16 @@ TUI 只读 agent 转写过的 JSON，不解析原始材料。
 uv sync
 uv run pytest
 ```
+
+需要 Python 3.11 以上（uv 会自动准备）。
+
+### 扩展点
+
+核心只做一件事：把文件加载成一个 `Context`（[context.py](src/ezgoggles/context.py)）。其他功能都挂在下面四个注册表上，加功能不用改核心：
+
+| 扩展点 | 怎么加 |
+|---|---|
+| TUI 面板 | 在 `src/ezgoggles/tui/panels/` 写一个 `Panel` 子类，加进 `PANELS`。主屏幕按列表顺序逐步展开。 |
+| 界面语言或文案风格 | 在 `src/ezgoggles/locales/` 放一个 `.toml`。设置 `base` 可以继承另一种语言，只改部分文案。 |
+| 开窗方式 | 在 `src/ezgoggles/launch/launchers.py` 写一个 `Launcher` 子类，加进 `LAUNCHERS`。 |
+| 校验规则 | 在 `src/ezgoggles/check.py` 写一个规则函数，加进 `MAP_RULES` 或 `ACTIVITY_RULES`。 |

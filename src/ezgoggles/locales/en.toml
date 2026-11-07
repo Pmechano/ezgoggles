@@ -1,0 +1,61 @@
+# Interface strings. Body text (map, requirements, activity) is never translated.
+# English is the fallback for keys that other locales do not define.
+
+[meta]
+name = "English"
+order = 2
+
+[setup]
+title = "Setup"
+language = "Language"
+name = "Name"
+name_hint = "Lowercase letters, digits or -, for example alice. Used in branch names."
+name_bad = "Use only lowercase letters, digits and -. Start with a letter or digit."
+mode = "Mode"
+mode_learn = "Learning: learn while you build. The agent explains more and leaves some work to you"
+mode_deliver = "Delivery: the agent does more. You still need to understand the whole project"
+mode_bad = "Select a mode."
+theme = "Theme"
+theme_dark = "Dark"
+theme_light = "Light"
+save = "Save"
+
+[mode]
+learn = "Learning"
+deliver = "Delivery"
+
+[panel]
+requirements = "Requirements"
+map = "Project map"
+stage = "My stage"
+activity = "What the agent is doing"
+ack = "I have read this"
+
+[map]
+missing = "There is no map yet. The leader's agent must write `goggles-data/map.json` as `ezgoggles/leader-guide.md` describes."
+invalid = "`goggles-data/map.json` has errors. Ask the agent to run `ezgoggles check` and fix it."
+flow = "Data flow"
+sources = "Original materials"
+
+[stage]
+input = "Input"
+output = "Output"
+next = "Goes to"
+from = "Comes from"
+end = "(last stage)"
+start = "(first stage)"
+path = "Directory"
+detail = "How it works inside"
+you = "← you"
+none = "You are not on a stage branch now (current branch: `{branch}`).\n\nTell your agent which stage you take. It will switch to the `{name}/<stage-id>` branch. Stages: {ids}."
+
+[activity]
+empty = "The agent has not written a plan yet."
+invalid = "`activity.json` has errors. Ask the agent to run `ezgoggles check`."
+byuser = "you do this"
+summary = "Summary"
+handoff = "Handoff change"
+
+[status]
+branch = "Branch"
+changed = "Uncommitted files"

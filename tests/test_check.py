@@ -3,7 +3,8 @@ import json
 
 from conftest import ACTIVITY, MAP, write_activity
 
-from ezgoggles.check import check_activity, check_map, run_check
+from ezgoggles.check import MAP_RULES, check_activity, check_map
+from ezgoggles.cli import cmd_check
 
 
 def test_valid_map(project):
@@ -90,8 +91,18 @@ def test_cycle_is_warning(project):
     assert any("clean -> model -> report -> clean" in w for w in r.warnings)
 
 
-def test_run_check_exit_code(project, capsys):
-    assert run_check(project) == 0
+def test_rules_are_pluggable(project, monkeypatch):
+    def no_report_stage(m, paths, r):
+        if any(s["id"] == "report" for s in m["stages"]):
+            r.errors.append("custom: report is not allowed")
+
+    monkeypatch.setattr("ezgoggles.check.MAP_RULES", [*MAP_RULES, no_report_stage])
+    r = check_map(project)
+    assert r.errors == ["custom: report is not allowed"] and r.data is None
+
+
+def test_check_command_exit_code(project, capsys):
+    assert cmd_check(project) == 0
     project.map.write_text("[]", encoding="utf-8")
-    assert run_check(project) == 1
+    assert cmd_check(project) == 1
     assert "ERROR goggles-data/map.json" in capsys.readouterr().out

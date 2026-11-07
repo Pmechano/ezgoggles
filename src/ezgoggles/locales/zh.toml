@@ -1,0 +1,62 @@
+# Interface strings. Body text (map, requirements, activity) is never translated.
+# To add a language or a style, add a file here. A file can set `base` to
+# another locale and override only some keys.
+
+[meta]
+name = "中文"
+order = 1
+
+[setup]
+title = "设置"
+language = "语言"
+name = "名字"
+name_hint = "小写字母、数字或 -，例如 alice。会用在分支名里。"
+name_bad = "名字只能用小写字母、数字和 -，并且以字母或数字开头。"
+mode = "模式"
+mode_learn = "学习模式：边做边学，agent 会多解释，并留一部分给你做"
+mode_deliver = "交付模式：agent 多做一些，你至少要看懂整个项目"
+mode_bad = "请选择一个模式。"
+theme = "主题"
+theme_dark = "深色"
+theme_light = "浅色"
+save = "保存"
+
+[mode]
+learn = "学习模式"
+deliver = "交付模式"
+
+[panel]
+requirements = "任务要求"
+map = "项目地图"
+stage = "我的段"
+activity = "Agent 在做什么"
+ack = "我已认知"
+
+[map]
+missing = "还没有地图。组长的 agent 需要按 `ezgoggles/leader-guide.md` 写出 `goggles-data/map.json`。"
+invalid = "`goggles-data/map.json` 没有通过校验。请让 agent 运行 `ezgoggles check` 并修好它。"
+flow = "数据流"
+sources = "原始材料"
+
+[stage]
+input = "输入"
+output = "输出"
+next = "交给"
+from = "来自"
+end = "（最后一段）"
+start = "（第一段）"
+path = "目录"
+detail = "内部怎么做"
+you = "← 你"
+none = "你现在不在任何一段的分支上（当前分支：`{branch}`）。\n\n告诉你的 agent 你想做哪一段，它会帮你切换到 `{name}/<段 id>` 分支。可选的段：{ids}。"
+
+[activity]
+empty = "agent 还没有写计划。"
+invalid = "`activity.json` 没有通过校验。请让 agent 运行 `ezgoggles check`。"
+byuser = "你来做"
+summary = "总结"
+handoff = "交接变化"
+
+[status]
+branch = "分支"
+changed = "未提交的文件"

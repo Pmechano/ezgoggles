@@ -1,17 +1,17 @@
-"""Locate the group project and the files that ezgoggles reads and writes."""
+"""Where ezgoggles keeps its files, and small JSON helpers."""
 
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 DATA_DIR = "goggles-data"
 LOCAL_DIR = ".local"
 
-PLUGIN_DIR = Path(__file__).resolve().parents[2]
-SCHEMA_DIR = Path(__file__).resolve().parent / "schema"
+PACKAGE_DIR = Path(__file__).resolve().parent
+PLUGIN_DIR = PACKAGE_DIR.parents[1]
+SCHEMA_DIR = PACKAGE_DIR / "schema"
 
 
 @dataclass(frozen=True)
@@ -42,42 +42,12 @@ class Paths:
     def pid(self) -> Path:
         return self.local / "tui.pid"
 
-
-def find_root(start: Path | None = None) -> Path:
-    """Return the group project root.
-
-    The root is the nearest parent that holds goggles-data/. If there is none,
-    the root is the git top level. If that also fails, the root is the start dir.
-    """
-    start = (start or Path.cwd()).resolve()
-    for d in (start, *start.parents):
-        if (d / DATA_DIR).is_dir():
-            return d
-    top = git(start, "rev-parse", "--show-toplevel")
-    if top:
-        # Inside the ezgoggles submodule itself, go up to the superproject.
-        sup = git(start, "rev-parse", "--show-superproject-working-tree")
-        return Path(sup or top).resolve()
-    return start
-
-
-def git(cwd: Path, *args: str) -> str | None:
-    """Run git and return stripped stdout, or None on any failure."""
-    try:
-        out = subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=5,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if out.returncode != 0:
-        return None
-    return out.stdout.strip()
+    def rel(self, path: Path) -> str:
+        """path relative to the project root, or absolute if it is outside."""
+        try:
+            return path.relative_to(self.root).as_posix()
+        except ValueError:
+            return path.as_posix()
 
 
 def read_json(path: Path) -> object | None:

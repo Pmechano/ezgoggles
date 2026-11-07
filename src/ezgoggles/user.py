@@ -5,15 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass
 
+from . import i18n
 from .paths import Paths, read_json, write_json
 
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,29}$")
 MODES = ("learn", "deliver")
-LANGUAGES = ("zh", "en")
 THEMES = ("dark", "light")
-
-# Steps of the progressive view: 1 requirements, 2 map, 3 my stage, 4 activity.
-LAST_STEP = 4
 
 
 @dataclass
@@ -22,7 +19,7 @@ class User:
     mode: str = ""
     language: str = "zh"
     theme: str = "dark"
-    step: int = 1
+    step: int = 1  # how many panels of the progressive view are open
 
     @property
     def ready(self) -> bool:
@@ -39,12 +36,12 @@ def load_user(paths: Paths) -> User:
         user.name = name
     if raw.get("mode") in MODES:
         user.mode = raw["mode"]
-    if raw.get("language") in LANGUAGES:
+    if raw.get("language") in i18n.available():
         user.language = raw["language"]
     if raw.get("theme") in THEMES:
         user.theme = raw["theme"]
     step = raw.get("step")
-    if isinstance(step, int) and 1 <= step <= LAST_STEP:
+    if isinstance(step, int) and step >= 1:
         user.step = step
     return user
 
