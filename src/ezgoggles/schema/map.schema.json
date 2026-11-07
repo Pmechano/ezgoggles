@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ezgoggles/map.schema.json",
+  "title": "ezgoggles map",
+  "description": "The project map. The leader's agent writes it from the course materials. The TUI shows it to every member.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "goal", "requirements", "stages"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project name. One line."
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the project does, in one or two sentences. Markdown."
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sources", "content"],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Paths (relative to the project root) of the original course materials."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Faithful transcription of the requirements and the grading rubric. Markdown. You can change the layout. Do not remove any requirement."
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The pipeline stages. Each stage is also one direction that one member can take.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "path", "input", "output", "next"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "ASCII id. Used in branch names: <name>/<id>."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human name of the stage."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Directory (relative to the project root) that holds this stage."
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this stage takes in, and from where."
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this stage gives out."
+          },
+          "next": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "description": "Ids of the stages that take this stage's output. Empty for the last stage."
+          },
+          "detail": {
+            "type": "string",
+            "description": "How the stage works inside, and why. Markdown. Shown only in learning mode."
+          }
+        }
+      }
+    }
+  }
+}

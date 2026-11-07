@@ -1,0 +1,12 @@
+# Design drafts (kept local)
+draft.md
+ai-draft*.md
+
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
