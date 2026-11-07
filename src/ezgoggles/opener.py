@@ -91,14 +91,17 @@ def tui_argv(paths: Paths) -> list[str]:
     return [sys.executable, "-m", "ezgoggles", "tui", "--root", str(paths.root)]
 
 
+def _q(arg: str) -> str:
+    return f'"{arg}"' if any(c.isspace() for c in arg) else arg
+
+
 def manual_command(paths: Paths) -> str:
-    """The command a user can type to start the TUI by hand."""
+    """One command that starts the TUI by hand from any directory.
+
+    No `cd ... &&`: Windows PowerShell 5.1 cannot parse `&&`.
+    """
     plugin = Path(__file__).resolve().parents[2]
-    try:
-        plugin_arg = plugin.relative_to(paths.root).as_posix()
-    except ValueError:
-        plugin_arg = str(plugin)
-    return f'cd "{paths.root}" && uv run --project {plugin_arg} ezgoggles tui'
+    return f"uv run --project {_q(str(plugin))} ezgoggles --root {_q(str(paths.root))} tui"
 
 
 def window_title(paths: Paths) -> str:
@@ -111,9 +114,6 @@ def launch_commands(paths: Paths) -> list[tuple[list[str], dict]]:
     title = window_title(paths)
     root = str(paths.root)
     out: list[tuple[list[str], dict]] = []
-
-    if os.environ.get("EZGOGGLES_NO_WINDOW"):  # tests and CI
-        return out
 
     if os.name == "nt":
         wt = shutil.which("wt")
@@ -170,9 +170,14 @@ def _spawn(argv: list[str], kwargs: dict) -> bool:
 
 
 def open_tui(paths: Paths) -> str:
-    """Start the TUI if it is not running. Return 'running', 'started' or 'manual'."""
+    """Start the TUI if it is not running.
+
+    Return 'running', 'started', 'disabled' (EZGOGGLES_NO_WINDOW is set) or 'manual'.
+    """
     if tui_running(paths):
         return "running"
+    if os.environ.get("EZGOGGLES_NO_WINDOW"):  # tests and CI
+        return "disabled"
     write_json(paths.pid, {"pid": None, "launching": time.time()})
     for argv, kwargs in launch_commands(paths):
         if _spawn(argv, kwargs):

@@ -68,6 +68,21 @@ def test_finished_plan_needs_handoff(project):
     assert any("handoffChange" in w for w in r.warnings)
 
 
+def test_null_map_is_an_error(project):
+    project.map.write_text("null", encoding="utf-8")
+    r = check_map(project)
+    assert not r.ok and "not of type 'object'" in r.errors[0]
+
+
+def test_cycle_is_warning(project):
+    loop = json.loads(json.dumps(MAP))
+    loop["stages"][2]["next"] = ["clean"]
+    project.map.write_text(json.dumps(loop), encoding="utf-8")
+    r = check_map(project)
+    assert r.ok
+    assert any("clean -> model -> report -> clean" in w for w in r.warnings)
+
+
 def test_run_check_exit_code(project, capsys):
     assert run_check(project) == 0
     project.map.write_text("[]", encoding="utf-8")

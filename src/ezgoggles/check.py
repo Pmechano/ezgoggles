@@ -32,20 +32,24 @@ def _validator(name: str) -> Draft202012Validator:
     return Draft202012Validator(schema)
 
 
-def _load(report: Report) -> object | None:
+_FAILED = object()
+
+
+def _load(report: Report) -> object:
+    """Return the parsed JSON, or _FAILED after an error is recorded."""
     try:
         text = report.file.read_text(encoding="utf-8")
     except FileNotFoundError:
         report.errors.append("file does not exist")
-        return None
+        return _FAILED
     except OSError as e:
         report.errors.append(f"cannot read file: {e}")
-        return None
+        return _FAILED
     try:
         return json.loads(text)
     except json.JSONDecodeError as e:
         report.errors.append(f"not valid JSON: {e.msg} (line {e.lineno}, column {e.colno})")
-        return None
+        return _FAILED
 
 
 def _schema_errors(name: str, data: object) -> list[str]:
@@ -59,7 +63,7 @@ def _schema_errors(name: str, data: object) -> list[str]:
 def check_map(paths: Paths) -> Report:
     report = Report(paths.map)
     data = _load(report)
-    if data is None:
+    if data is _FAILED:
         return report
     report.errors += _schema_errors("map", data)
     if report.errors:
@@ -80,6 +84,12 @@ def check_map(paths: Paths) -> Report:
                 report.errors.append(f"stages/{s['id']}/next: a stage cannot hand off to itself")
         if not (paths.root / s["path"]).exists():
             report.warnings.append(f"stages/{s['id']}/path: '{s['path']}' does not exist yet")
+    cycle = _find_cycle({s["id"]: s["next"] for s in stages})
+    if cycle:
+        report.warnings.append(
+            "stages: the handoffs form a loop (" + " -> ".join(cycle) + "); "
+            "the TUI shows these stages in file order"
+        )
     for src in data["requirements"]["sources"]:
         if not (paths.root / src).exists():
             report.warnings.append(f"requirements/sources: '{src}' does not exist")
@@ -91,13 +101,37 @@ def check_map(paths: Paths) -> Report:
     return report
 
 
+def _find_cycle(graph: dict[str, list[str]]) -> list[str] | None:
+    state: dict[str, int] = {}  # 1 = on the current path, 2 = done
+    path: list[str] = []
+
+    def visit(n: str) -> list[str] | None:
+        state[n] = 1
+        path.append(n)
+        for m in graph.get(n, []):
+            if m not in graph or m == n:
+                continue
+            if state.get(m) == 1:
+                return path[path.index(m):] + [m]
+            if m not in state and (found := visit(m)):
+                return found
+        path.pop()
+        state[n] = 2
+        return None
+
+    for n in graph:
+        if n not in state and (found := visit(n)):
+            return found
+    return None
+
+
 def check_activity(paths: Paths, stage_ids: set[str] | None) -> Report:
     report = Report(paths.activity)
     if not paths.activity.exists():
         report.data = {}
         return report
     data = _load(report)
-    if data is None:
+    if data is _FAILED:
         return report
     report.errors += _schema_errors("activity", data)
     if report.errors:

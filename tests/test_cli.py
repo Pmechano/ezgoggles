@@ -54,6 +54,15 @@ def test_open_reports_state(project, monkeypatch, capsys):
     assert "already running" in capsys.readouterr().out
 
 
+def test_no_window_env(project, monkeypatch, capsys):
+    monkeypatch.setenv("EZGOGGLES_NO_WINDOW", "1")
+    cmd_open(project)
+    out = capsys.readouterr().out
+    assert "EZGOGGLES_NO_WINDOW" in out and "could not open" not in out
+    assert "--root" in out and "&&" not in out
+    assert not project.pid.exists()
+
+
 def test_pid_lifecycle(project):
     assert not opener.tui_running(project)
     opener.claim_pid(project)

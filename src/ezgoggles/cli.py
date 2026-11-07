@@ -32,6 +32,9 @@ def cmd_open(paths: Paths) -> int:
         print("tui: already running.")
     elif result == "started":
         print("tui: started in a new window.")
+    elif result == "disabled":
+        print("tui: no window, because EZGOGGLES_NO_WINDOW is set. To start it by hand:")
+        print(f"  {manual_command(paths)}")
     else:
         print("tui: could not open a window. Ask the user to run this in a terminal:")
         print(f"  {manual_command(paths)}")
@@ -50,9 +53,12 @@ def cmd_open(paths: Paths) -> int:
     user = load_user(paths)
     if user.ready:
         print(f"user: name={user.name} mode={user.mode} language={user.language}.")
-    else:
+    elif result in ("running", "started"):
         print("user: setup is not finished. Ask the user to finish the setup page "
               "in the TUI window, then run `ezgoggles open` again.")
+    else:
+        print("user: setup is not finished. The user must start the TUI with the "
+              "command above and finish the setup page.")
 
     branch = current_branch(paths)
     if branch is not None:
