@@ -42,7 +42,7 @@ If the project already has work in it, do not move or rename existing files unle
 
 Read all of `docs/`. Then propose a pipeline to the leader, and change it until the leader agrees.
 
-- A stage is also a direction. One member takes one stage. So the number of stages is close to the number of directions the group needs.
+- A stage is also a direction. Usually one member takes one stage. So the number of stages is close to the number of directions the group needs. The team size can be unknown: members can take more than one stage.
 - Put the boundary between two stages at a clear handoff: a file, a table or a function that one stage gives to the next.
 - The report or the presentation can be a stage.
 
