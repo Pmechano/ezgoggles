@@ -37,7 +37,7 @@ def test_open_reports_state(project, monkeypatch, capsys):
     cmd_open(project)
     out = capsys.readouterr().out
     assert "could not open a window" in out
-    assert "map: OK (3 stages" in out
+    assert "map: OK (3 stages, in map order: clean, model, report)" in out
     assert "setup is not finished" in out
 
     save_user(project, User(name="alice", mode="learn"))

@@ -38,7 +38,7 @@ _FAILED = object()
 def _load(report: Report) -> object:
     """Return the parsed JSON, or _FAILED after an error is recorded."""
     try:
-        text = report.file.read_text(encoding="utf-8")
+        text = report.file.read_text(encoding="utf-8-sig")  # PowerShell adds a BOM
     except FileNotFoundError:
         report.errors.append("file does not exist")
         return _FAILED

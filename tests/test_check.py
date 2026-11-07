@@ -1,3 +1,4 @@
+import codecs
 import json
 
 from conftest import ACTIVITY, MAP, write_activity
@@ -66,6 +67,12 @@ def test_finished_plan_needs_handoff(project):
     write_activity(project, {"clean": [plan]})
     r = check_activity(project, {"clean"})
     assert any("handoffChange" in w for w in r.warnings)
+
+
+def test_bom_is_accepted(project):
+    write_activity(project)
+    project.activity.write_bytes(codecs.BOM_UTF8 + project.activity.read_bytes())
+    assert check_activity(project, {"clean"}).ok
 
 
 def test_null_map_is_an_error(project):

@@ -42,8 +42,9 @@ def cmd_open(paths: Paths) -> int:
     m = check_map(paths)
     ids: set[str] = set()
     if m.data:
-        ids = {s["id"] for s in m.data["stages"]}
-        print(f"map: OK ({len(ids)} stages: {', '.join(sorted(ids))}).")
+        order = [s["id"] for s in m.data["stages"]]
+        ids = set(order)
+        print(f"map: OK ({len(order)} stages, in map order: {', '.join(order)}).")
     elif not paths.map.exists():
         print(f"map: {DATA_DIR}/map.json does not exist. "
               f"If the user is the leader, read {plugin}/leader-guide.md.")

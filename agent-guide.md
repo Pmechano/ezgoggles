@@ -24,7 +24,9 @@ uv run --project ezgoggles ezgoggles <command>
 | `tui` | Run the TUI in the current terminal. The user can run it by hand when no window opens. |
 | `init` | Leader setup only. See `leader-guide.md`. |
 
-All commands accept `--root <dir>` when you do not run them from the project root.
+All commands accept `--root <dir>` when you do not run them from the project root. Example: `uv run --project <project>/ezgoggles ezgoggles --root <project> check`.
+
+`check` validates only the structure of `map.json` and `activity.json`. It does not check that handoff files exist or that a stage runs.
 
 If the shell does not find `uv`, try `python -m uv`. If that also fails, ask the user to install uv: https://docs.astral.sh/uv/getting-started/installation/
 
@@ -36,10 +38,11 @@ If you set up the project for the leader, follow `leader-guide.md`. The steps in
    - `setup is not finished`: ask the user to finish the setup page in the TUI window. Then run `open` again.
    - `map.json does not exist`: if the user is the leader, follow `leader-guide.md`. If not, tell the user to ask the leader for the map.
    - `could not open a window`: give the user the printed command.
-2. Read `goggles-data/map.json`. Read `goggles-data/.local/user.json` for the user's `name`, `mode` and `language`.
+   - `no window, because EZGOGGLES_NO_WINDOW is set`: continue your work. The user starts the TUI by hand when they want it.
+2. Read `goggles-data/map.json`: the goal, all stages, and your stage in detail. Read `requirements.content` when the work needs it. Read `goggles-data/.local/user.json` for the user's `name`, `mode` and `language`.
 3. Find the stage. The branch name is `<name>/<stage-id>`, and `open` prints it.
    - If the user is not on a stage branch, ask which stage they take.
-   - Update `main` first (pull if there is a remote).
+   - Update `main` first, if the team uses a remote.
    - Switch to `<name>/<stage-id>`. Create the branch from `main` if it does not exist. If it exists, merge `main` into it.
 4. Before you change code, write a plan in `activity.json` (see below). Then run `check`.
 
@@ -68,7 +71,7 @@ The TUI shows this file to the user as a tree: stage → plan → items. The fil
 - Add a new plan for each piece of work. Put it under the stage id. Keep the old plans.
 - Aim for 3 to 7 items in a plan. `check` rejects more than 9. Each item is one step that the user can understand.
 - When you finish an item, set `done` to `true`.
-- When the work ends, write `summary` and `handoffChange`.
+- When the work ends, write `summary` and `handoffChange`. The summary describes your work. Leave `byUser` items undone until the user does them.
 - Schema: `ezgoggles/src/ezgoggles/schema/activity.schema.json`.
 
 ## Handoffs
@@ -79,13 +82,14 @@ A handoff change is the one thing that the user must know.
 - If your work changes a handoff, tell the user in the chat. Also write the change in `handoffChange`.
 - If no handoff changes, write `"none"`.
 - If your work needs a change in another stage, do not make that change. Tell the user to speak with the member who owns that stage.
+- If an input from an upstream stage does not exist yet, use a small sample with the same format. In the summary, say what you could not test with real input.
 
 ## Scope
 
-- Change only the files in your stage's `path`. Before you change a file outside it, tell the user and get approval.
+- Change only the files in your stage's `path`. Before you change a file outside it, tell the user and get approval. Exception: `goggles-data/.local/` is personal, and you write `activity.json` there.
 - Do not change `ezgoggles/`.
 - Do not change `map.json`. The only exception: the user is the leader and asks for the change. After the change, run `check`.
-- Make small commits. Merge into `main` through a pull request.
+- Make small commits. Merge into `main` through a pull request, or in the way that the team agreed.
 
 ## Modes
 

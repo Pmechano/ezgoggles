@@ -83,7 +83,7 @@ def git(cwd: Path, *args: str) -> str | None:
 def read_json(path: Path) -> object | None:
     """Return the parsed JSON, or None if the file is missing or broken."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return None
 
