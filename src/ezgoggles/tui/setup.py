@@ -25,7 +25,7 @@ class SetupScreen(Screen[User]):
     SetupScreen { align: center middle; }
     #setup {
         width: 76; max-width: 100%; height: auto; max-height: 100%;
-        padding: 1 3; border: round $accent; background: transparent;
+        padding: 1 3; border: double $accent; background: transparent;
     }
     #setup .title { margin-bottom: 0; }
     #setup .subtitle { color: $text-muted; margin-bottom: 1; }
@@ -53,7 +53,7 @@ class SetupScreen(Screen[User]):
     def compose(self) -> ComposeResult:
         d = self.draft
         with VerticalScroll(id="setup"):
-            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.t('setup.title')}[/]", classes="title")
+            yield Static(f"[$accent]⚙[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.t('setup.title')}[/]", classes="title")
             yield Static(self.t("setup.subtitle"), classes="subtitle")
             yield Label(self.t("setup.language"), classes="field")
             with RadioSet(id="language", classes="row"):
