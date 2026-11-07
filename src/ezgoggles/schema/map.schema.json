@@ -2,46 +2,73 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ezgoggles/map.schema.json",
   "title": "ezgoggles map",
-  "description": "The project map. The leader's agent writes it from the course materials. The TUI shows it to every member.",
+  "description": "The project map, written for members to read and understand. The original course materials stay in docs/. A translation (goggles-data/translations/map.<language>.json) uses the same schema and also sets `source`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["title", "goal", "requirements", "stages"],
+  "required": ["language", "title", "goal", "requirements", "stages"],
   "properties": {
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[a-z0-9]+)?$",
+      "description": "Language of the text in this file, for example zh or en."
+    },
+    "source": {
+      "type": "string",
+      "description": "Translations only: the fingerprint of the map.json they translate. `ezgoggles check` prints it."
+    },
     "title": {
       "type": "string",
       "minLength": 1,
-      "description": "Project name. One line."
+      "description": "Project name."
     },
     "goal": {
       "type": "string",
       "minLength": 1,
-      "description": "What the project does, in one or two sentences. Markdown."
+      "description": "One sentence: what the project makes."
     },
     "requirements": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sources", "content"],
+      "required": ["sources", "deliver", "grading"],
+      "description": "Key points only. Each item is one short line.",
       "properties": {
         "sources": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
-          "description": "Paths (relative to the project root) of the original course materials."
+          "description": "Paths of the original course materials, relative to the project root."
         },
-        "content": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Faithful transcription of the requirements and the grading rubric. Markdown. You can change the layout. Do not remove any requirement."
+        "deliver": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "What the group hands in."
+        },
+        "deadlines": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Dates and what is due on each."
+        },
+        "grading": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "How the work is graded, with weights."
+        },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Other rules that a member must not miss."
         }
       }
     },
     "stages": {
       "type": "array",
       "minItems": 1,
-      "description": "The pipeline stages. Each stage is also one direction that one member can take.",
+      "description": "The pipeline stages. Each stage is also one direction that a member can take.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "path", "input", "output", "next"],
+        "required": ["id", "name", "does", "path", "input", "output", "next"],
         "properties": {
           "id": {
             "type": "string",
@@ -51,22 +78,27 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Human name of the stage."
+            "description": "Short human name of the stage."
+          },
+          "does": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One short sentence: what this stage does."
           },
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "Directory (relative to the project root) that holds this stage."
+            "description": "Directory of this stage, relative to the project root."
           },
           "input": {
             "type": "string",
             "minLength": 1,
-            "description": "What this stage takes in, and from where."
+            "description": "A short noun phrase: what this stage takes in."
           },
           "output": {
             "type": "string",
             "minLength": 1,
-            "description": "What this stage gives out."
+            "description": "A short noun phrase: what this stage gives out."
           },
           "next": {
             "type": "array",
@@ -75,7 +107,7 @@
           },
           "detail": {
             "type": "string",
-            "description": "How the stage works inside, and why. Markdown. Shown only in learning mode."
+            "description": "How the stage works inside, and why. Markdown. Shown only in learning mode, folded."
           }
         }
       }

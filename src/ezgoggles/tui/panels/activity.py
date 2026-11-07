@@ -20,7 +20,7 @@ def stage_order(ctx: Context, activity: dict) -> list[str]:
 
 def stage_label(ctx: Context, sid: str) -> Text:
     s = ctx.stage_by_id.get(sid)
-    t = Text(f"{sid} · {s['name']}" if s else sid, style="bold")
+    t = Text(s["name"] if s else sid, style="bold")
     if sid == ctx.mine:
         t.append(f"  {ctx.t('stage.you')}", style="italic")
     return t

@@ -2,7 +2,28 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import unicodedata
+
 NO_CHANGE = {"", "none", "无", "无变化", "no change"}
+
+
+def fingerprint(m: dict) -> str:
+    """A short hash of a map's content. Translations record it in `source`."""
+    data = {k: v for k, v in m.items() if k != "source"}
+    text = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def structure(m: dict) -> list[tuple]:
+    """The parts of a map that a translation must not change."""
+    return [(s["id"], s["path"], tuple(s["next"])) for s in m["stages"]]
+
+
+def width(text: str) -> int:
+    """Terminal columns: CJK characters take two."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
 
 
 def stage_label(stage: dict) -> str:

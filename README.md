@@ -69,7 +69,8 @@ CLAUDE.md              @AGENTS.md
 docs/                  课程原始材料
 ezgoggles/             本 plugin（submodule，不要修改）
 goggles-data/
-  map.json             地图（提交）
+  map.json             地图：要点和 pipeline，写给人读懂（提交）
+  translations/        地图的其他语言版本，由 agent 翻译（提交）
   .local/              个人状态（git 忽略）
     user.json          名字、模式、语言、主题、看到第几步
     activity.json      agent 的计划和进度

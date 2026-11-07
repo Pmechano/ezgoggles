@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass, field
 
 from . import i18n
-from .check import Report, check_activity, check_map
+from .check import Report, check_activity, check_map, check_translation
 from .paths import Paths
 from .project import changed_files, current_branch, stage_from_branch
 from .user import User
@@ -23,18 +23,34 @@ class Context:
     activity_report: Report
     branch: str | None = None
     changed: int | None = None
+    translation_report: Report | None = None
+    map: dict | None = field(init=False)  # what the user reads: a translation, or the original
+    translation: str = field(init=False)  # native | ok | missing | stale | invalid | none
     stages: list[dict] = field(init=False)
     stage_ids: set[str] = field(init=False)
     mine: str | None = field(init=False)  # the user's stage, from the branch name
 
     def __post_init__(self) -> None:
-        m = self.map
-        self.stages = m["stages"] if m else []
+        original = self.original_map
+        tr = self.translation_report
+        if original is None:
+            self.map, self.translation = None, "none"
+        elif original["language"] == self.user.language:
+            self.map, self.translation = original, "native"
+        elif tr is None or not tr.file.exists():
+            self.map, self.translation = original, "missing"
+        elif not tr.ok:
+            self.map, self.translation = original, "invalid"
+        elif tr.stale:
+            self.map, self.translation = original, "stale"
+        else:
+            self.map, self.translation = tr.data, "ok"
+        self.stages = self.map["stages"] if self.map else []
         self.stage_ids = {s["id"] for s in self.stages}
         self.mine = stage_from_branch(self.branch, self.user.name, self.stage_ids)
 
     @property
-    def map(self) -> dict | None:
+    def original_map(self) -> dict | None:
         d = self.map_report.data
         return d if isinstance(d, dict) else None
 
@@ -53,9 +69,13 @@ class Context:
 
 def load_context(paths: Paths, user: User, branch: str | None = None, changed: int | None = None) -> Context:
     mr = check_map(paths)
-    ids = {s["id"] for s in mr.data["stages"]} if isinstance(mr.data, dict) else None
+    original = mr.data if isinstance(mr.data, dict) else None
+    ids = {s["id"] for s in original["stages"]} if original else None
     ar = check_activity(paths, ids)
-    return Context(paths, user, mr, ar, branch, changed)
+    tr = None
+    if original and original["language"] != user.language:
+        tr = check_translation(paths, user.language, original)
+    return Context(paths, user, mr, ar, branch, changed, tr)
 
 
 class Watcher:
@@ -82,7 +102,13 @@ class Watcher:
             self._git_at = now
             self._branch = current_branch(self.paths)
             self._changed = changed_files(self.paths)
-        sig = (self._mtime(self.paths.map), self._mtime(self.paths.activity), self._branch, self._changed)
+        sig = (
+            self._mtime(self.paths.map),
+            self._mtime(self.paths.activity),
+            self._mtime(self.paths.translation(user.language)),
+            self._branch,
+            self._changed,
+        )
         if not force and sig == self._sig:
             return None
         self._sig = sig

@@ -1,4 +1,4 @@
-# Interface strings. Body text (map, requirements, activity) is never translated.
+# Interface strings. Body text (map, requirements, activity) is never translated here.
 # To add a language or a style, add a file here. A file can set `base` to
 # another locale and override only some keys.
 
@@ -33,22 +33,32 @@ activity = "Agent 在做什么"
 ack = "我已认知"
 
 [map]
-missing = "还没有地图。组长的 agent 需要按 `ezgoggles/leader-guide.md` 写出 `goggles-data/map.json`。"
-invalid = "`goggles-data/map.json` 没有通过校验。请让 agent 运行 `ezgoggles check` 并修好它。"
-flow = "数据流"
-sources = "原始材料"
+missing = "还没有地图。组长的 agent 会按 `ezgoggles/leader-guide.md` 写出它。"
+invalid = "地图有错误。让 agent 运行 `ezgoggles check` 并修好它。"
+sources = "原文在"
+goes_to = "交给"
+
+[requirements]
+deliver = "交什么"
+deadlines = "截止"
+grading = "怎么评分"
+notes = "注意"
 
 [stage]
-input = "输入"
-output = "输出"
-next = "交给"
-from = "来自"
-end = "（最后一段）"
-start = "（第一段）"
-path = "目录"
+take = "你负责 **{name}**：{does}"
+from = "从 **{who}** 拿到：{what}"
+first = "起点：{what}"
+to = "交给 **{who}**：{what}"
+last = "最终产出：{what}"
+where = "代码在 `{path}`"
 detail = "内部怎么做"
 you = "← 你"
-none = "你现在不在任何一段的分支上（当前分支：`{branch}`）。\n\n告诉你的 agent 你想做哪一段，它会帮你切换到 `{name}/<段 id>` 分支。可选的段：{ids}。"
+none = "你还没有选定一段。告诉你的 agent 你想做哪一段，它会帮你切到对应的分支。\n\n可选：{names}"
+
+[translation]
+missing = "地图还没有中文版，下面是原文。让你的 agent 把它翻译过来。"
+stale = "地图的中文版已经过期，下面是原文。让你的 agent 重新翻译。"
+invalid = "地图的中文版有错误，下面是原文。让你的 agent 运行 `ezgoggles check`。"
 
 [activity]
 empty = "agent 还没有写计划。"

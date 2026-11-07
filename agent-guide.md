@@ -4,7 +4,7 @@ You work in a student group project. ezgoggles helps every member understand the
 
 ## Words
 
-- **Map**: `goggles-data/map.json`. It shows the project pipeline: the stages, the input and output of each stage, and the handoffs between stages. The leader owns the map.
+- **Map**: `goggles-data/map.json`. It shows the key points of the requirements and the project pipeline: the stages, what each stage does, and the handoffs between stages. It is written for members to understand, not as a reference. The leader owns the map.
 - **Stage**: one step of the pipeline. A stage is also a direction. Usually one member takes one stage. A member can take more than one stage, with one branch for each.
 - **Handoff**: what a stage takes from the stages before it, and what it gives to the stages after it.
 - **TUI**: a terminal window that shows the map and your plans to the user. It does not change project files. It writes only the user's personal settings in `goggles-data/.local/`. You never control it.
@@ -39,7 +39,8 @@ If you set up the project for the leader, follow `leader-guide.md`. The steps in
    - `map.json does not exist`: if the user is the leader, follow `leader-guide.md`. If not, tell the user to ask the leader for the map.
    - `could not open a window`: give the user the printed command.
    - `no window, because EZGOGGLES_NO_WINDOW is set`: continue your work. The user starts the TUI by hand when they want it.
-2. Read `goggles-data/map.json`: the goal, all stages, and your stage in detail. Read `requirements.content` when the work needs it. Read `goggles-data/.local/user.json` for the user's `name`, `mode` and `language`.
+   - `translation: ...`: the user reads the map in another language. Do the translation first (see below).
+2. Read `goggles-data/map.json`. It has the key points only. For exact requirements, read the originals listed in `requirements.sources`. Read `goggles-data/.local/user.json` for the user's `name`, `mode` and `language`.
 3. Find the stage. The branch name is `<name>/<stage-id>`, and `open` prints it.
    - If the user is not on a stage branch, ask which stage they take.
    - Update `main` first, if the team uses a remote.
@@ -69,10 +70,23 @@ The TUI shows this file to the user as a tree: stage → plan → items. The fil
 ```
 
 - Add a new plan for each piece of work. Put it under the stage id. Keep the old plans.
-- Aim for 3 to 7 items in a plan. `check` rejects more than 9. Each item is one step that the user can understand.
+- The user must read the plan comfortably. The title says what the work achieves, in one short line. Each item is one short step in the user's words, not in code names.
+- Aim for 3 to 7 items in a plan. `check` rejects more than 9.
 - When you finish an item, set `done` to `true`.
 - When the work ends, write `summary` and `handoffChange`. The summary describes your work. Leave `byUser` items undone until the user does them.
 - Schema: `ezgoggles/src/ezgoggles/schema/activity.schema.json`.
+
+## Translating the map
+
+The map is written in one language (`language` in `map.json`, usually `zh`). If the user's `language` is different, `open` prints a `translation:` line. Then:
+
+1. Copy `goggles-data/map.json` to `goggles-data/translations/map.<language>.json`.
+2. Translate the text: `title`, `goal`, the requirement items, and each stage's `name`, `does`, `input`, `output` and `detail`.
+3. Do not change `id`, `path`, `next` or `sources`.
+4. Set `language` to the user's language, and `source` to the fingerprint that `open` prints.
+5. Run `check`.
+
+The translation is shared: commit it with your work. All members who read that language then see the same text.
 
 ## Handoffs
 
@@ -86,7 +100,7 @@ A handoff change is the one thing that the user must know.
 
 ## Scope
 
-- Change only the files in your stage's `path`. Before you change a file outside it, tell the user and get approval. Exception: `goggles-data/.local/` is personal, and you write `activity.json` there.
+- Change only the files in your stage's `path`. Before you change a file outside it, tell the user and get approval. Exceptions: you write `activity.json` in `goggles-data/.local/`, and translations in `goggles-data/translations/`.
 - Do not change `ezgoggles/`.
 - Do not change `map.json`. The only exception: the user is the leader and asks for the change. After the change, run `check`.
 - Make small commits. Merge into `main` through a pull request, or in the way that the team agreed.
@@ -125,6 +139,7 @@ A Chinese summary of the rules is in `ezgoggles/ASD-STE100.md`. Read it when you
 | File | Who writes it | Committed |
 |---|---|---|
 | `goggles-data/map.json` | the leader's agent | yes |
+| `goggles-data/translations/map.<language>.json` | the agent of a member who reads that language | yes |
 | `goggles-data/.local/user.json` | the TUI. Read it, do not write it. | no |
 | `goggles-data/.local/activity.json` | you | no |
 | `goggles-data/.local/tui.pid` | `open` and the TUI | no |

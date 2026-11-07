@@ -15,7 +15,7 @@ from typing import Callable
 
 from jsonschema import Draft202012Validator
 
-from .model import find_cycle
+from .model import find_cycle, fingerprint, structure, width
 from .paths import SCHEMA_DIR, Paths
 
 
@@ -25,6 +25,7 @@ class Report:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     data: object | None = None  # set only when there are no errors
+    stale: bool = False  # translations: made from an older map.json
 
     @property
     def ok(self) -> bool:
@@ -78,7 +79,31 @@ def sources_exist(m: dict, paths: Paths, r: Report) -> None:
             r.warnings.append(f"requirements/sources: '{src}' does not exist")
 
 
-MAP_RULES: list[MapRule] = [unique_ids, known_next, no_loops, stage_paths_exist, sources_exist]
+# Members must read the map comfortably. These limits are hints, so they only warn.
+# Widths are terminal columns: a CJK character counts as two.
+READABLE = {"goal": 120, "name": 24, "does": 60, "input": 40, "output": 40, "item": 100}
+MAX_ITEMS = 7
+
+
+def readable(m: dict, paths: Paths, r: Report) -> None:
+    def long(where: str, text: str, limit: int) -> None:
+        if width(text) > limit:
+            r.warnings.append(f"{where}: long for a reader ({width(text)} columns, aim for {limit}); shorten it")
+
+    long("goal", m["goal"], READABLE["goal"])
+    for key, items in m["requirements"].items():
+        if key == "sources":
+            continue
+        if len(items) > MAX_ITEMS:
+            r.warnings.append(f"requirements/{key}: {len(items)} items; aim for {MAX_ITEMS} or fewer")
+        for i, text in enumerate(items):
+            long(f"requirements/{key}/{i}", text, READABLE["item"])
+    for s in m["stages"]:
+        for key in ("name", "does", "input", "output"):
+            long(f"stages/{s['id']}/{key}", s[key], READABLE[key])
+
+
+MAP_RULES: list[MapRule] = [unique_ids, known_next, no_loops, stage_paths_exist, sources_exist, readable]
 
 
 # ---------- activity rules ----------
@@ -153,6 +178,39 @@ def check_map(paths: Paths) -> Report:
     if r.ok:
         r.data = data
     return r
+
+
+def check_translation(paths: Paths, language: str, original: dict) -> Report:
+    """A translation must keep the structure of the original and name its fingerprint."""
+    r = Report(paths.translation(language))
+    data = _load(r)
+    if data is _FAILED:
+        return r
+    r.errors += _schema_errors("map", data)
+    if r.errors:
+        return r
+    if data["language"] != language:
+        r.errors.append(f"language: is '{data['language']}', but the file name says '{language}'")
+    if "source" not in data:
+        r.errors.append("source: missing; set it to the fingerprint that `ezgoggles check` prints")
+    if structure(data) != structure(original):
+        r.errors.append("stages: ids, paths and next must be the same as in map.json, in the same order")
+    readable(data, paths, r)
+    if r.ok:
+        r.data = data
+        if data["source"] != fingerprint(original):
+            r.stale = True
+            r.warnings.append("made from an older map.json; translate it again")
+    return r
+
+
+def check_translations(paths: Paths, original: dict) -> list[Report]:
+    if not paths.translations.is_dir():
+        return []
+    out = []
+    for f in sorted(paths.translations.glob("map.*.json")):
+        out.append(check_translation(paths, f.name[len("map."):-len(".json")], original))
+    return out
 
 
 def check_activity(paths: Paths, stage_ids: set[str] | None) -> Report:

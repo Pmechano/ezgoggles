@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from ...context import Context
-from ...model import stage_label, topo_order
+from ...model import topo_order
 from .base import MarkdownPanel
 
 
 class MapPanel(MarkdownPanel):
+    """Whole first: the goal and the flow. Then one short entry per stage."""
+
     key = "map"
 
     @staticmethod
@@ -13,22 +15,17 @@ class MapPanel(MarkdownPanel):
         m = ctx.map
         by_id = ctx.stage_by_id
         order = topo_order(ctx.stages)
-        lines = [f"**{m['title']}**", "", m["goal"].strip(), ""]
+        linear = all(len(s["next"]) <= 1 for s in order)
+        lines = [f"**{m['title']}**: {m['goal'].strip()}", ""]
 
-        if len(order) > 1 and all(len(s["next"]) <= 1 for s in order):
-            chain = " → ".join(f"`{s['id']}`" for s in order)
-            lines += [f"{ctx.t('map.flow')}: {chain}", ""]
+        if linear and len(order) > 1:
+            lines += ["**" + " → ".join(s["name"] for s in order) + "**", ""]
 
         for s in order:
             you = f"  {ctx.t('stage.you')}" if s["id"] == ctx.mine else ""
-            nxt = ", ".join(stage_label(by_id[n]) for n in s["next"] if n in by_id) or ctx.t("stage.end")
-            lines += [
-                f"#### {stage_label(s)}{you}",
-                "",
-                f"- {ctx.t('stage.path')}: `{s['path']}`",
-                f"- {ctx.t('stage.input')}: {s['input']}",
-                f"- {ctx.t('stage.output')}: {s['output']}",
-                f"- {ctx.t('stage.next')}: {nxt}",
-                "",
-            ]
-        return "\n".join(lines).rstrip()
+            lines.append(f"- **{s['name']}**{you}: {s['does']}")
+            lines.append(f"    - {s['input']} → {s['output']}")
+            if not linear and s["next"]:
+                names = ", ".join(by_id[n]["name"] for n in s["next"] if n in by_id)
+                lines.append(f"    - {ctx.t('map.goes_to')}: {names}")
+        return "\n".join(lines)

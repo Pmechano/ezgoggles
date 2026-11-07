@@ -91,6 +91,36 @@ def test_cycle_is_warning(project):
     assert any("clean -> model -> report -> clean" in w for w in r.warnings)
 
 
+def test_long_text_only_warns(project):
+    long = json.loads(json.dumps(MAP))
+    long["stages"][0]["does"] = "去掉异常记录" * 10
+    long["requirements"]["grading"] = [f"第 {i} 条" for i in range(9)]
+    project.map.write_text(json.dumps(long, ensure_ascii=False), encoding="utf-8")
+    r = check_map(project)
+    assert r.ok
+    assert any("stages/clean/does: long for a reader" in w for w in r.warnings)
+    assert any("requirements/grading: 9 items" in w for w in r.warnings)
+
+
+def test_translation_checks(project):
+    from conftest import MAP_EN
+
+    from ezgoggles.check import check_translation
+    from ezgoggles.model import fingerprint
+
+    project.translations.mkdir()
+    f = project.translation("en")
+    f.write_text(json.dumps(dict(MAP_EN, source=fingerprint(MAP))), encoding="utf-8")
+    r = check_translation(project, "en", MAP)
+    assert r.ok and not r.stale, r.errors
+    broken = json.loads(json.dumps(MAP_EN))
+    broken["stages"][0]["path"] = "elsewhere/"
+    f.write_text(json.dumps(broken), encoding="utf-8")
+    r = check_translation(project, "en", MAP)
+    assert any("source: missing" in e for e in r.errors)
+    assert any("ids, paths and next" in e for e in r.errors)
+
+
 def test_rules_are_pluggable(project, monkeypatch):
     def no_report_stage(m, paths, r):
         if any(s["id"] == "report" for s in m["stages"]):

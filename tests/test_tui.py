@@ -1,10 +1,12 @@
 import json
 import subprocess
 
-from conftest import MAP, write_activity
+from conftest import MAP, MAP_EN, write_activity
 
 from ezgoggles import i18n
 from ezgoggles.context import load_context
+from ezgoggles.model import fingerprint
+from ezgoggles.tui.panels.requirements import RequirementsPanel
 from ezgoggles.tui.app import GogglesApp, MainScreen
 from ezgoggles.tui.panels import PANELS
 from ezgoggles.tui.panels.project_map import MapPanel
@@ -17,22 +19,50 @@ def _branch(project, name):
     subprocess.run(["git", "checkout", "-b", name], cwd=project.root, check=True, capture_output=True)
 
 
-def test_map_markdown_follows_data_flow(project):
+def test_map_markdown_whole_first(project):
     shuffled = dict(MAP, stages=[MAP["stages"][2], MAP["stages"][0], MAP["stages"][1]])
     project.map.write_text(json.dumps(shuffled, ensure_ascii=False), encoding="utf-8")
     ctx = load_context(project, User(name="alice", mode="learn"), "alice/model")
     md = MapPanel.markdown(ctx)
-    assert "`clean` → `model` → `report`" in md
-    assert "model · 需求预测  ← 你" in md
+    lines = md.splitlines()
+    assert lines[0].startswith("**共享单车需求预测**")  # the goal comes first
+    assert "**数据清洗 → 需求预测 → 报告**" in md  # then the whole flow
+    assert "- **需求预测**  ← 你: 训练模型，预测下周需求" in md
+    assert "src/" not in md  # paths are for agents
 
 
-def test_stage_markdown_modes(project):
-    learn = StagePanel.markdown(load_context(project, User(name="alice", mode="learn"), "alice/clean"))
-    deliver = StagePanel.markdown(load_context(project, User(name="alice", mode="deliver"), "alice/clean"))
-    assert "补齐缺失的时段" in learn and "补齐缺失的时段" not in deliver
-    assert "（第一段）" in learn
+def test_stage_markdown(project):
+    ctx = load_context(project, User(name="alice", mode="learn"), "alice/model")
+    md = StagePanel.markdown(ctx)
+    assert md.splitlines()[0] == "你负责 **需求预测**：训练模型，预测下周需求"
+    assert "从 **数据清洗** 拿到：汇总表" in md
+    assert "交给 **报告**：预测值" in md
+    learn = load_context(project, User(name="alice", mode="learn"), "alice/clean")
+    deliver = load_context(project, User(name="alice", mode="deliver"), "alice/clean")
+    assert "前后均值" in StagePanel.detail(learn)
+    assert StagePanel.detail(deliver) == ""
     none = StagePanel.markdown(load_context(project, User(name="alice", mode="learn", language="en"), "main"))
-    assert "`main`" in none and "`clean`" in none
+    assert "数据清洗, 需求预测, 报告" in none
+
+
+def test_requirements_markdown_order(project):
+    md = RequirementsPanel.markdown(load_context(project, User(name="a", mode="learn")))
+    heads = [line for line in md.splitlines() if line.startswith("**")]
+    assert heads == ["**交什么**", "**截止**", "**怎么评分**"]
+
+
+def test_translation_is_used_when_fresh(project):
+    user = User(name="a", mode="learn", language="en")
+    assert load_context(project, user).translation == "missing"
+    project.translations.mkdir()
+    fresh = dict(MAP_EN, source=fingerprint(MAP))
+    project.translation("en").write_text(json.dumps(fresh), encoding="utf-8")
+    ctx = load_context(project, user)
+    assert ctx.translation == "ok" and ctx.map["title"] == "Bike demand forecast"
+    project.translation("en").write_text(json.dumps(dict(fresh, source="old")), encoding="utf-8")
+    ctx = load_context(project, user)
+    assert ctx.translation == "stale" and ctx.map["title"] == "共享单车需求预测"
+    assert load_context(project, User(name="a", mode="learn")).translation == "native"
 
 
 def test_locales_are_discovered_and_complete():
@@ -85,7 +115,7 @@ async def test_activity_tree_and_live_reload(project):
         await pilot.pause()
         tree = s.query_one("#activity")
         stage = tree.root.children[0]
-        assert "clean" in str(stage.label) and "← 你" in str(stage.label)
+        assert "数据清洗" in str(stage.label) and "← 你" in str(stage.label)
         plan = stage.children[0]
         assert "[1/2]" in str(plan.label)
         assert "你来做" in str(plan.children[1].label)

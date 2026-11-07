@@ -39,6 +39,7 @@ class MainScreen(Screen):
     def compose(self) -> ComposeResult:
         user = self.gapp.user
         yield Static("", id="status")
+        yield Static("", id="notice")
         with Horizontal(id="body"):
             for column, side in (("main", False), ("side", True)):
                 with VerticalScroll(id=column, classes="col"):
@@ -82,6 +83,10 @@ class MainScreen(Screen):
         if ctx.changed is not None:
             parts.append(f"{ctx.t('status.changed')}: {ctx.changed}")
         self.query_one("#status", Static).update("  ·  ".join(parts))
+        notice = self.query_one("#notice", Static)
+        notice.display = ctx.translation in ("missing", "stale", "invalid")
+        if notice.display:
+            notice.update(ctx.t(f"translation.{ctx.translation}"))
 
     # ----- progressive view -----
 
@@ -117,6 +122,7 @@ class MainScreen(Screen):
 class GogglesApp(App):
     CSS = """
     #status { height: 1; padding: 0 1; background: $panel; color: $text-muted; }
+    #notice { padding: 0 1; background: $warning-muted; color: $text; }
     #body { height: 1fr; }
     .col { width: 1fr; height: 100%; padding: 0 1; }
     #body.narrow { layout: vertical; overflow-y: auto; }

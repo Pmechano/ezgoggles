@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Callable
 
 from .bootstrap import setup_project
-from .check import Report
+from .check import Report, check_translations
 from .context import load_context
+from .model import fingerprint
 from .launch import manual_command, open_tui
 from .paths import DATA_DIR, PLUGIN_DIR, SCHEMA_DIR, Paths
 from .project import current_branch, find_root
@@ -27,12 +28,35 @@ def print_report(paths: Paths, r: Report) -> None:
 
 def cmd_check(paths: Paths) -> int:
     ctx = load_context(paths, load_user(paths))
-    for r in (ctx.map_report, ctx.activity_report):
+    reports = [ctx.map_report]
+    if ctx.original_map:
+        reports += check_translations(paths, ctx.original_map)
+    reports.append(ctx.activity_report)
+    for r in reports:
         print_report(paths, r)
-    if ctx.map_report.ok and ctx.activity_report.ok:
+    if ctx.original_map:
+        print(f"map fingerprint: {fingerprint(ctx.original_map)} "
+              "(a translation sets \"source\" to this value)")
+    if all(r.ok for r in reports):
         return 0
     print(f"Schemas: {SCHEMA_DIR.as_posix()}")
     return 1
+
+
+def translation_hint(ctx) -> str | None:
+    """What the agent must do so the user can read the map in their language."""
+    lang = ctx.user.language
+    target = f"{DATA_DIR}/translations/map.{lang}.json"
+    why = {
+        "missing": f"there is no {lang} translation",
+        "stale": f"the {lang} translation is out of date",
+        "invalid": f"the {lang} translation has errors",
+    }.get(ctx.translation)
+    if why is None:
+        return None
+    return (f"translation: {why}. Translate {DATA_DIR}/map.json into {target}, "
+            f"with \"language\": \"{lang}\" and \"source\": \"{fingerprint(ctx.original_map)}\". "
+            "Then run `ezgoggles check`.")
 
 
 def cmd_open(paths: Paths) -> int:
@@ -53,6 +77,8 @@ def cmd_open(paths: Paths) -> int:
     if ctx.map:
         order = [s["id"] for s in ctx.stages]
         print(f"map: OK ({len(order)} stages, in map order: {', '.join(order)}).")
+        if hint := translation_hint(ctx):
+            print(hint)
     elif not paths.map.exists():
         print(f"map: {DATA_DIR}/map.json does not exist. "
               f"If the user is the leader, read {paths.rel(PLUGIN_DIR)}/leader-guide.md.")

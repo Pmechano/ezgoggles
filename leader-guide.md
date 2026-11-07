@@ -62,37 +62,48 @@ Write the `path` of each stage in the map.
 
 Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map.schema.json`.
 
+**The map is for understanding, not for reference.** Members read it in the TUI. They must be able to read it comfortably and understand the project. Exact details stay in `docs/` and in the stage directories, where agents read them.
+
 ```json
 {
-  "title": "Campus bike demand forecast",
-  "goal": "Forecast next week's demand at each station from the ride history, and write a report.",
+  "language": "zh",
+  "title": "共享单车需求预测",
+  "goal": "预测各站点下周的骑行需求，并写成报告。",
   "requirements": {
     "sources": ["docs/assignment.pdf", "docs/rubric.pdf"],
-    "content": "## Requirements\n- ...\n## Rubric\n- ..."
+    "deliver": ["预测代码", "PDF 报告（不超过 10 页）"],
+    "deadlines": ["12 月 20 日：提交全部材料"],
+    "grading": ["模型 40%", "报告 60%"],
+    "notes": ["迟交每天扣 10%"]
   },
   "stages": [
     {
       "id": "clean",
-      "name": "Data cleaning",
+      "name": "数据清洗",
+      "does": "去掉异常记录，补齐缺失时段",
       "path": "src/clean/",
-      "input": "Raw ride records, CSV (data/rides/)",
-      "output": "A table of rides per station per hour",
+      "input": "原始骑行记录",
+      "output": "汇总表",
       "next": ["model"],
-      "detail": "Remove broken records. Fill the missing hours."
+      "detail": "按站点和小时分组。缺失时段用前后均值填充，因为……"
     }
   ]
 }
 ```
 
-- `requirements.content`: transcribe the requirements and the rubric faithfully. You can change the layout. Do not remove any requirement, any number or any deadline. Members see this text first. If the materials are incomplete or conflict, do not guess: write the open points under the heading `Open questions` at the end, and tell the leader.
-- `requirements.sources`: list the files that you transcribed.
-- `goal`: one or two sentences.
+- `language`: `zh` unless the leader says otherwise. Members who read in another language get a translation (see `agent-guide.md`).
+- `goal`: one sentence. What the project makes.
+- `requirements`: key points only, one short line each. `deliver`: what the group hands in. `deadlines`: dates. `grading`: weights. `notes`: rules that a member must not miss. Do not copy the original text. If the materials are incomplete or conflict, put the open point in `notes` and tell the leader.
+- `requirements.sources`: the original files. Readers go there for details.
 - `id`: lowercase ASCII. Members' branch names use it.
-- `input` and `output`: one short line each, so that a member understands the handoff at a glance. Name the file or the object, and where it is. Put exact formats (columns, fields, function signatures) in a file in the stage directory, and name that file here. If a handoff file is too big for git, write where members get it.
-- `detail`: how the stage works inside, and why. Only learning mode shows it.
-- Write in the language of the course materials. The TUI language setting changes only the interface. It does not translate the map.
+- `name`: a short name that a person says, not a file name.
+- `does`: one short sentence. What the stage does.
+- `input` and `output`: a short noun phrase each, for example "汇总表". Put exact formats (columns, fields, function signatures) in a file in the stage directory. If a handoff file is too big for git, write where members get it in that file.
+- `detail`: how the stage works inside, and why. Only learning mode shows it, folded.
 
-Then run `check` until it prints `OK`. `check` validates only the structure. It does not check that the transcription is faithful, so compare it with the originals yourself. Then run `open`, and ask the leader to read the map in the TUI.
+Write for a reader who is new to the project: use the words of the course, not code names, and keep each list short. `check` warns when a text is long for a reader.
+
+Then run `check` until it prints `OK`. `check` validates the structure and warns about long text. It does not check that the key points are correct, so compare them with the originals yourself. Then run `open`, and ask the leader to read the map in the TUI.
 
 ## 6. Publish
 

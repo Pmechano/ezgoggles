@@ -7,38 +7,61 @@ import pytest
 from ezgoggles.paths import Paths
 
 MAP = {
-    "title": "校园共享单车需求预测",
-    "goal": "用历史骑行数据预测各站点下周的需求量，并写成报告。",
+    "language": "zh",
+    "title": "共享单车需求预测",
+    "goal": "预测各站点下周的骑行需求，并写成报告。",
     "requirements": {
         "sources": ["docs/assignment.md"],
-        "content": "## 任务要求\n- 预测下周需求\n## 评分细则\n- 模型 40%\n- 报告 60%",
+        "deliver": ["预测代码", "PDF 报告"],
+        "deadlines": ["12 月 20 日：提交全部材料"],
+        "grading": ["模型 40%", "报告 60%"],
     },
     "stages": [
         {
             "id": "clean",
             "name": "数据清洗",
+            "does": "去掉异常记录，补齐缺失时段",
             "path": "src/clean/",
-            "input": "原始骑行记录 CSV",
-            "output": "按站点和小时汇总的表",
+            "input": "原始骑行记录",
+            "output": "汇总表",
             "next": ["model"],
-            "detail": "去掉异常记录，补齐缺失的时段。",
+            "detail": "按站点和小时分组。缺失时段用前后均值填充。",
         },
         {
             "id": "model",
             "name": "需求预测",
+            "does": "训练模型，预测下周需求",
             "path": "src/model/",
-            "input": "按站点和小时汇总的表",
-            "output": "各站点下周每小时的预测值",
+            "input": "汇总表",
+            "output": "预测值",
             "next": ["report"],
         },
         {
             "id": "report",
             "name": "报告",
+            "does": "把结果写成报告",
             "path": "report/",
             "input": "预测值",
             "output": "PDF 报告",
             "next": [],
         },
+    ],
+}
+
+MAP_EN = {
+    **MAP,
+    "language": "en",
+    "title": "Bike demand forecast",
+    "goal": "Forecast next week's demand at each station, and write a report.",
+    "requirements": {
+        "sources": ["docs/assignment.md"],
+        "deliver": ["Forecast code", "PDF report"],
+        "grading": ["Model 40%", "Report 60%"],
+    },
+    "stages": [
+        dict(MAP["stages"][0], name="Cleaning", does="Remove bad records, fill gaps", input="Raw rides", output="Summary table"),
+        dict(MAP["stages"][1], name="Forecast", does="Train a model, forecast demand", input="Summary table", output="Forecasts"),
+        dict(MAP["stages"][2], name="Report", does="Write up the results", input="Forecasts", output="PDF report"),
     ],
 }
 

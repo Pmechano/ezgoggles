@@ -31,6 +31,13 @@ class Paths:
         return self.data / "map.json"
 
     @property
+    def translations(self) -> Path:
+        return self.data / "translations"
+
+    def translation(self, language: str) -> Path:
+        return self.translations / f"map.{language}.json"
+
+    @property
     def activity(self) -> Path:
         return self.local / "activity.json"
 
