@@ -112,6 +112,9 @@ def launch_commands(paths: Paths) -> list[tuple[list[str], dict]]:
     root = str(paths.root)
     out: list[tuple[list[str], dict]] = []
 
+    if os.environ.get("EZGOGGLES_NO_WINDOW"):  # tests and CI
+        return out
+
     if os.name == "nt":
         wt = shutil.which("wt")
         if wt:
