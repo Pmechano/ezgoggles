@@ -27,7 +27,7 @@ def test_map_markdown_whole_first(project):
     lines = md.splitlines()
     assert lines[0].startswith("**共享单车需求预测**")  # the goal comes first
     assert "**数据清洗 → 需求预测 → 报告**" in md  # then the whole flow
-    assert "- **需求预测**  ← 你: 训练模型，预测下周需求" in md
+    assert "- **需求预测**  ← 你：训练模型，预测下周需求" in md
     assert "src/" not in md  # paths are for agents
 
 

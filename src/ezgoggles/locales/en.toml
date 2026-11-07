@@ -31,6 +31,9 @@ stage = "My stage"
 activity = "What the agent is doing"
 ack = "I have read this"
 
+[punct]
+colon = ": "
+
 [map]
 missing = "There is no map yet. The leader's agent writes it as `ezgoggles/leader-guide.md` describes."
 invalid = "The map has errors. Ask your agent to run `ezgoggles check` and fix it."

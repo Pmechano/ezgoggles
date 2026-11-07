@@ -32,6 +32,9 @@ stage = "我的段"
 activity = "Agent 在做什么"
 ack = "我已认知"
 
+[punct]
+colon = "："
+
 [map]
 missing = "还没有地图。组长的 agent 会按 `ezgoggles/leader-guide.md` 写出它。"
 invalid = "地图有错误。让 agent 运行 `ezgoggles check` 并修好它。"
