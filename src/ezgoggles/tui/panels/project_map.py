@@ -17,7 +17,7 @@ def flow_markup(ctx: Context) -> str:
         name = s["name"].replace("[", r"\[")
         style = "b reverse $accent" if s["id"] == ctx.mine else "$foreground on $panel"
         chips.append(f"[{style}] {name} [/]")
-    return " [$primary]─⚙─[/] ".join(chips)  # a gear train: each stage drives the next
+    return " [$text-muted]→[/] ".join(chips)
 
 
 class MapPanel(MarkdownPanel):

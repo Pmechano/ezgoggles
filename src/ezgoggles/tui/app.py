@@ -38,7 +38,7 @@ class MainScreen(Screen):
     def compose(self) -> ComposeResult:
         self._bind_keys()
         with Horizontal(id="topbar"):
-            yield Static(f"[$accent]⚙[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
+            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
             yield Static("", id="status")
         yield Static("", id="notice")
         with Horizontal(id="body"):
@@ -60,10 +60,7 @@ class MainScreen(Screen):
     def _section(self, i: int, panel: type[Panel]) -> Collapsible:
         title = f"{i + 1}  {self.t(f'panel.{panel.key}')}"
         ack = Button(f"✓ {self.t('panel.ack')}", id=f"ack-{i}", classes="ack", compact=True, flat=True)
-        return Collapsible(
-            panel(id=f"panel-{panel.key}"), ack, title=title, collapsed=False, id=f"sec-{i}",
-            collapsed_symbol="▸", expanded_symbol="▾",
-        )
+        return Collapsible(panel(id=f"panel-{panel.key}"), ack, title=title, collapsed=False, id=f"sec-{i}")
 
     def on_mount(self) -> None:
         self._layout(self.app.size.width)
@@ -140,7 +137,7 @@ class GogglesApp(App):
     CSS = """
     Screen { background: $background; }
 
-    #topbar { height: 2; padding: 0 2; background: $panel; border-bottom: double $primary 45%; }
+    #topbar { height: 1; padding: 0 2; background: $panel; border-bottom: none; }
     #brand { width: auto; }
     #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
     #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
@@ -156,7 +153,7 @@ class GogglesApp(App):
         padding: 0 1 0 0;
         margin: 0 0 1 0;
     }
-    Collapsible.current { border: double $accent; }
+    Collapsible.current { border: round $accent; }
     Collapsible > CollapsibleTitle { text-style: bold; padding: 0 1; color: $primary; }
     Collapsible.current > CollapsibleTitle { color: $accent; }
     Collapsible > CollapsibleTitle:hover { background: $primary 15%; color: $accent; }
