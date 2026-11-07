@@ -69,8 +69,11 @@ def cmd_init(paths: Paths) -> int:
     plugin = _plugin_rel(paths)
     guide = f"{plugin}/agent-guide.md"
     entry = (
-        f"> **If you are an agent:** before any work, read `{guide}` and follow it.\n"
-        f"> **如果你是 Agent：** 开工前先阅读并遵循 `{guide}`。\n"
+        f"> **If you are an agent:** before any work, read `{guide}` and follow it. "
+        f"If `{plugin}/` is empty, run `git submodule update --init` first.\n"
+        f">\n"
+        f"> **如果你是 Agent：** 开工前先阅读并遵循 `{guide}`。"
+        f"如果 `{plugin}/` 是空的，先运行 `git submodule update --init`。\n"
     )
     done: list[str] = []
 
