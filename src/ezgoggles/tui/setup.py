@@ -1,4 +1,4 @@
-"""The setup page: language, name, mode and theme."""
+"""The setup page: language, name, mode, theme, motion and sound."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from .. import i18n
 from ..user import MODES, NAME_RE, THEMES, User
 from .theme import THEME
 
+SWITCHES = ("motion", "sound")  # on/off settings; each is a bool field of User
 
 
 class SetupScreen(Screen[User]):
@@ -70,6 +71,11 @@ class SetupScreen(Screen[User]):
             with RadioSet(id="theme", classes="row"):
                 for theme in THEMES:
                     yield RadioButton(self.t(f"setup.theme_{theme}"), value=d.theme == theme)
+            for switch in SWITCHES:
+                yield Label(self.t(f"setup.{switch}"), classes="field")
+                with RadioSet(id=switch, classes="row"):
+                    for on in (True, False):
+                        yield RadioButton(self.t("setup.on" if on else "setup.off"), value=getattr(d, switch) == on)
             yield Static("", id="error")
             yield Button(self.t("setup.save"), variant="primary", id="save", compact=True)
 
@@ -85,6 +91,8 @@ class SetupScreen(Screen[User]):
         elif group == "theme":
             self.draft.theme = THEMES[event.index]
             self.app.theme = THEME[self.draft.theme]
+        elif group in SWITCHES:
+            setattr(self.draft, group, event.index == 0)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self.draft.name = event.value.strip().lower()

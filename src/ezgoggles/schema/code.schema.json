@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ezgoggles/code.schema.json",
+  "title": "ezgoggles code flow",
+  "description": "The code layer, personal (goggles-data/.local/code.json, not committed). Learning mode only. For the user's stage: the files that the data goes through, in order. Keys are stage ids.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "time",
+      "steps"
+    ],
+    "properties": {
+      "time": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}",
+        "description": "When this was last written, local time."
+      },
+      "steps": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 9,
+        "description": "Files in the order that the data goes through them.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file",
+            "does"
+          ],
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Path relative to the project root. Add ::name for one function, for example src/clean/fill.py::fill_gaps."
+            },
+            "does": {
+              "type": "string",
+              "minLength": 1,
+              "description": "One short sentence: what this step does to the data."
+            }
+          }
+        }
+      }
+    }
+  }
+}

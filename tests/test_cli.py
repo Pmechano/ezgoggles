@@ -115,3 +115,13 @@ def test_plain_linux_without_gnome_is_manual(monkeypatch):
     monkeypatch.setenv("DISPLAY", ":0")
     monkeypatch.setattr(launchers.shutil, "which", lambda n: None)
     assert launchers.available_launchers() == []
+
+
+def test_check_includes_code_flow(project, capsys):
+    from conftest import write_code
+
+    from ezgoggles.cli import cmd_check
+
+    write_code(project, {"model": {"time": "bad", "steps": []}})
+    assert cmd_check(project) == 1
+    assert "ERROR goggles-data/.local/code.json" in capsys.readouterr().out

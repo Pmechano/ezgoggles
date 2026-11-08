@@ -20,44 +20,80 @@ mode_bad = "请选择一个模式。"
 theme = "主题"
 theme_dark = "深色"
 theme_light = "浅色"
+motion = "动效"
+sound = "音效"
+on = "开"
+off = "关"
 save = "保存"
 
 [mode]
 learn = "学习模式"
 deliver = "交付模式"
 
-[panel]
-requirements = "任务要求"
-map = "项目地图"
-stage = "我的段"
-activity = "Agent 在做什么"
-ack = "我已认知"
+[view]
+task = "任务"
+flow = "流程"
+code = "代码"
+agent = "Agent"
+
+[tab]
+changed = "要求改了"
+days = "还有 {n} 天"
+today = "今天截止"
+handoff = "交接变了"
+upstream = "上游有更新"
+code_new = "已更新"
+code_none = "还没写"
+agent_you = "等你来做"
+agent_done = "完成"
+agent_idle = "空闲"
+
+[tour]
+step = "第 {n}/{total} 步"
+next = "看懂了，下一步"
+start = "开始使用"
+skip = "跳过引导"
+task = "先看要交什么、什么时候交。"
+flow = "再看项目分成哪几段，每段交给谁。用 ↑↓ 看别的段。"
+code = "这是你那段代码里，数据依次经过哪些文件。"
+agent = "最后，这里是你的 agent 正在做的事。"
 
 [punct]
 colon = "："
+sep = " · "
+list = "、"
 
 [map]
 missing = "还没有地图。组长的 agent 会按 `ezgoggles/leader-guide.md` 写出它。"
 invalid = "地图有错误。让 agent 运行 `ezgoggles check` 并修好它。"
 sources = "原文在"
-goes_to = "交给"
 
-[requirements]
-deliver = "交什么"
-deadlines = "截止"
+[task]
+what = "要交的东西"
+due = "截止"
+from = "由哪些段产出"
+all = "全部"
 grading = "怎么评分"
 notes = "注意"
 
-[stage]
-take = "你负责 **{name}**：{does}"
-from = "从 **{who}** 拿到：{what}"
-first = "起点：{what}"
-to = "交给 **{who}**：{what}"
-last = "最终产出：{what}"
-where = "代码在 `{path}`"
-detail = "内部怎么做"
+[flow]
 you = "← 你"
-none = "你还没有选定一段。告诉你的 agent 你想做哪一段，它会帮你切到对应的分支。\n\n可选：{names}"
+used_for = "用于"
+via = "（经 {name}）"
+goes_to = "交给 {names}"
+path = "代码在 {path}"
+none = "你还没有选定一段。告诉你的 agent 你想做哪一段，它会帮你切到对应的分支。"
+merged = "main 上已有"
+working = "有未合并的工作"
+empty = "还没有内容"
+
+[code]
+no_stage = "先选定你的段，这里才会显示它的代码。"
+missing = "你的 agent 还没写这段代码的流程。让它读一遍代码，写进 `goggles-data/.local/code.json`。"
+invalid = "`code.json` 没有通过校验。请让 agent 运行 `ezgoggles check`。"
+start = "从这里开始"
+end = "交出"
+time = "更新于 {time}"
 
 [translation]
 missing = "地图还没有中文版，下面是原文。让你的 agent 把它翻译过来。"
@@ -70,11 +106,13 @@ invalid = "`activity.json` 没有通过校验。请让 agent 运行 `ezgoggles c
 byuser = "你来做"
 summary = "总结"
 handoff = "交接变化"
+you = "← 你"
 
 [status]
 branch = "分支"
 changed = "{n} 个文件未提交"
 
 [keys]
+tabs = "切换"
 settings = "设置"
 quit = "退出"

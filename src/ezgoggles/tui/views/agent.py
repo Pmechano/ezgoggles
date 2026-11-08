@@ -1,3 +1,5 @@
+"""What the user's agent is doing: its plans, by stage."""
+
 from __future__ import annotations
 
 from rich.text import Text
@@ -6,7 +8,8 @@ from textual.widgets import Static, Tree
 
 from ...context import Context
 from ...model import handoff_changed, topo_order
-from .base import Panel
+from ..widgets import motion_on
+from .base import Status, View
 
 
 def stage_order(ctx: Context, activity: dict) -> list[str]:
@@ -37,7 +40,7 @@ def stage_label(ctx: Context, sid: str, pal: dict[str, str]) -> Text:
     s = ctx.stage_by_id.get(sid)
     t = Text(s["name"] if s else sid, style="bold")
     if sid == ctx.mine:
-        t.append(f"  {ctx.t('stage.you')}", style=f"italic {pal['accent']}")
+        t.append(f"  {ctx.t('activity.you')}", style=f"italic {pal['accent']}")
     return t
 
 
@@ -50,8 +53,11 @@ def plan_label(plan: dict, pal: dict[str, str]) -> Text:
     return t
 
 
-def item_label(ctx: Context, item: dict, pal: dict[str, str]) -> Text:
-    if item["done"]:
+def item_label(ctx: Context, item: dict, pal: dict[str, str], flash: bool = False) -> Text:
+    if item["done"] and flash:  # just done: it shows bright for a moment
+        t = Text("✓ ", style=f"bold reverse {pal['success']}")
+        t.append(f" {item['text']}", style=f"bold {pal['success']}")
+    elif item["done"]:
         t = Text("✓ ", style=pal["success"])
         t.append(item["text"], style="dim")
     else:
@@ -83,15 +89,38 @@ def handoff_label(ctx: Context, plan: dict, pal: dict[str, str]) -> Text | None:
     return t
 
 
-class ActivityPanel(Panel):
-    key = "activity"
-    side = True
+def latest_plan(ctx: Context) -> dict | None:
+    """The newest plan of the user's stage, or the newest plan of all if no stage is picked."""
+    activity = ctx.activity or {}
+    if ctx.mine:
+        plans = activity.get(ctx.mine) or []
+        return plans[-1] if plans else None
+    plans = [p for ps in activity.values() for p in ps]
+    return max(plans, key=lambda p: p["time"]) if plans else None
+
+
+def done_keys(ctx: Context) -> set[tuple]:
+    return {(sid, p["time"], i)
+            for sid, plans in (ctx.activity or {}).items()
+            for p in plans for i, it in enumerate(p["items"]) if it["done"]}
+
+
+FLASH = 0.8  # seconds
+
+
+class AgentView(View):
+    key = "agent"
 
     DEFAULT_CSS = """
-    ActivityPanel #activity-msg { padding: 0 1; color: $text-muted; }
-    ActivityPanel Tree { height: auto; max-height: 100%; background: transparent; padding: 0 1; }
-    ActivityPanel Tree > .tree--guides { color: $foreground 25%; }
+    AgentView #activity-msg { padding: 0 1; color: $text-muted; }
+    AgentView Tree { height: auto; background: transparent; padding: 0 1; }
+    AgentView Tree > .tree--guides { color: $foreground 25%; }
     """
+
+    def __init__(self, **kw) -> None:
+        super().__init__(**kw)
+        self.ctx: Context | None = None
+        self.flash: set[tuple] = set()
 
     def compose(self):
         yield Static("", id="activity-msg")
@@ -100,6 +129,19 @@ class ActivityPanel(Panel):
         yield tree
 
     def update_from(self, ctx: Context) -> None:
+        old, self.ctx = self.ctx, ctx
+        if old is not None and motion_on(self):
+            self.flash = done_keys(ctx) - done_keys(old)
+            if self.flash:
+                self.set_timer(FLASH, self._end_flash)
+        self._build(ctx)
+
+    def _end_flash(self) -> None:
+        self.flash = set()
+        if self.ctx is not None:
+            self._build(self.ctx)
+
+    def _build(self, ctx: Context) -> None:
         msg = self.query_one("#activity-msg", Static)
         tree = self.query_one("#activity", Tree)
         tree.clear()
@@ -118,8 +160,19 @@ class ActivityPanel(Panel):
             snode = tree.root.add(stage_label(ctx, sid, pal), expand=(sid == ctx.mine or ctx.mine is None))
             for j, plan in enumerate(reversed(activity[sid])):
                 pnode = snode.add(plan_label(plan, pal), expand=(j == 0))
-                for it in plan["items"]:
-                    pnode.add_leaf(item_label(ctx, it, pal))
+                for i, it in enumerate(plan["items"]):
+                    pnode.add_leaf(item_label(ctx, it, pal, (sid, plan["time"], i) in self.flash))
                 for extra in (summary_label(ctx, plan), handoff_label(ctx, plan, pal)):
                     if extra is not None:
                         pnode.add_leaf(extra)
+
+    @staticmethod
+    def status(ctx: Context, seen: object) -> Status | None:
+        plan = latest_plan(ctx)
+        if plan is None:
+            return Status(ctx.t("tab.agent_idle"))
+        items = plan["items"]
+        if any(it.get("byUser") and not it["done"] for it in items):
+            return Status(ctx.t("tab.agent_you"), "act")
+        done = sum(it["done"] for it in items)
+        return Status(ctx.t("tab.agent_done") if done == len(items) else f"{done}/{len(items)}")

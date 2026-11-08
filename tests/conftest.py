@@ -12,8 +12,11 @@ MAP = {
     "goal": "预测各站点下周的骑行需求，并写成报告。",
     "requirements": {
         "sources": ["docs/assignment.md"],
-        "deliver": ["预测代码", "PDF 报告"],
-        "deadlines": ["12 月 20 日：提交全部材料"],
+        "deliver": [
+            {"text": "PDF 报告", "due": "2026-12-20", "from": ["report"]},
+            {"text": "预测代码", "due": "2026-12-20", "from": ["clean", "model"]},
+            {"text": "答辩", "due": "2026-12-22 14:00", "from": ["model", "report"]},
+        ],
         "grading": ["模型 40%", "报告 60%"],
     },
     "stages": [
@@ -25,7 +28,6 @@ MAP = {
             "input": "原始骑行记录",
             "output": "汇总表",
             "next": ["model"],
-            "detail": "按站点和小时分组。缺失时段用前后均值填充。",
         },
         {
             "id": "model",
@@ -55,7 +57,11 @@ MAP_EN = {
     "goal": "Forecast next week's demand at each station, and write a report.",
     "requirements": {
         "sources": ["docs/assignment.md"],
-        "deliver": ["Forecast code", "PDF report"],
+        "deliver": [
+            {"text": "PDF report", "due": "2026-12-20", "from": ["report"]},
+            {"text": "Forecast code", "due": "2026-12-20", "from": ["clean", "model"]},
+            {"text": "Defense", "due": "2026-12-22 14:00", "from": ["model", "report"]},
+        ],
         "grading": ["Model 40%", "Report 60%"],
     },
     "stages": [
@@ -93,6 +99,21 @@ def project(tmp_path: Path) -> Paths:
     _git(root, "init", "-b", "main")
     _git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-m", "init")
     return Paths(root)
+
+
+CODE = {
+    "model": {
+        "time": "2026-11-08T10:00",
+        "steps": [
+            {"file": "src/model/features.py", "does": "按站点算出过去 24 小时的特征"},
+            {"file": "src/model/train.py::fit", "does": "训练模型，存下参数"},
+        ],
+    }
+}
+
+
+def write_code(paths: Paths, data: dict = CODE) -> None:
+    paths.code.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
 def write_activity(paths: Paths, data: dict = ACTIVITY) -> None:

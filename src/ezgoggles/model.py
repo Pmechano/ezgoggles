@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import unicodedata
+from datetime import date
 
 NO_CHANGE = {"", "none", "无", "无变化", "no change"}
 
@@ -18,7 +19,9 @@ def fingerprint(m: dict) -> str:
 
 def structure(m: dict) -> list[tuple]:
     """The parts of a map that a translation must not change."""
-    return [(s["id"], s["path"], tuple(s["next"])) for s in m["stages"]]
+    stages = [(s["id"], s["path"], tuple(s["next"])) for s in m["stages"]]
+    deliver = [(d.get("due"), tuple(d["from"])) for d in m["requirements"]["deliver"]]
+    return stages + deliver
 
 
 def width(text: str) -> int:
@@ -54,6 +57,49 @@ def topo_order(stages: list[dict]) -> list[dict]:
 
 def upstream(stages: list[dict], sid: str) -> list[dict]:
     return [s for s in stages if sid in s["next"]]
+
+
+def downstream(stages: list[dict], sid: str) -> dict[str, str]:
+    """Every stage that the output of `sid` reaches, mapped to the next stage on the way there."""
+    nexts = {s["id"]: s["next"] for s in stages}
+    via: dict[str, str] = {}
+    todo = [(n, n) for n in nexts.get(sid, [])]
+    while todo:
+        n, first = todo.pop(0)
+        if n in via or n == sid or n not in nexts:
+            continue
+        via[n] = first
+        todo += [(m, first) for m in nexts[n]]
+    return via
+
+
+# ---------- task layer <-> solution layer ----------
+
+
+def used_for(m: dict, sid: str) -> list[tuple[dict, str | None]]:
+    """The deliverables that the work of `sid` goes into.
+
+    Each item is (deliverable, via): via is None when the stage feeds the
+    deliverable directly, or the next stage on the way to it.
+    """
+    reach = downstream(m["stages"], sid)
+    out = []
+    for d in m["requirements"]["deliver"]:
+        if sid in d["from"]:
+            out.append((d, None))
+        else:
+            hits = [reach[f] for f in d["from"] if f in reach]
+            if hits:
+                out.append((d, hits[0]))
+    return out
+
+
+def due_date(d: dict) -> date | None:
+    due = d.get("due")
+    try:
+        return date.fromisoformat(due[:10]) if due else None
+    except ValueError:
+        return None
 
 
 def find_cycle(graph: dict[str, list[str]]) -> list[str] | None:
