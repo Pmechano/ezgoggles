@@ -1,6 +1,8 @@
-# Design drafts (kept local)
+# Design drafts and notes for agents that develop this repo (kept local)
 draft.md
 ai-draft*.md
+AGENTS.md
+CLAUDE.md
 
 # Python / uv
 .venv/
