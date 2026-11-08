@@ -188,7 +188,7 @@ async def test_tabs_keys_and_status(project):
         write_activity(project)
         s.refresh_data(force=True)
         await pilot.pause()
-        assert str(tab.render()) == "4 Agent ●"  # name and a dot; the reason is in the tooltip
+        assert str(tab.render()).splitlines()[0].strip() == "4 Agent ●"  # name and a dot; the reason is in the tooltip
         assert tab.tooltip == "最新计划里有一项等你来做"
         await pilot.click("#tab-agent")
         await pilot.pause()

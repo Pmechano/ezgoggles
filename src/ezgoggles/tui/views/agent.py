@@ -17,6 +17,7 @@ from ..widgets import motion_on
 from .base import Status, View, esc
 
 FLASH = 0.8  # seconds that a just-done item stays bright
+DONE, TODO = esc("[x]"), esc("[ ]")
 
 
 def stage_order(ctx: Context, activity: dict) -> list[str]:
@@ -53,10 +54,10 @@ def line(mark: str, text: str, classes: str = "") -> HorizontalGroup:
 def item_line(ctx: Context, item: dict, flash: bool) -> HorizontalGroup:
     you = f"  [b $secondary]({ctx.t('activity.byuser')})[/]" if item.get("byUser") else ""
     if item["done"] and flash:
-        return line("[b reverse $success]✓[/]", f"[b $success]{esc(item['text'])}[/]{you}")
+        return line(f"[b $background on $accent]{DONE}[/]", f"[b $accent]{esc(item['text'])}[/]{you}")
     if item["done"]:
-        return line("[$success]✓[/]", f"[$text-muted]{esc(item['text'])}[/]{you}")
-    return line("[$text-muted]○[/]", f"{esc(item['text'])}{you}")
+        return line(DONE, f"[$text-muted]{esc(item['text'])}[/]{you}")
+    return line(f"[$text-muted]{TODO}[/]", f"{esc(item['text'])}{you}")
 
 
 def extra_lines(ctx: Context, plan: dict) -> list[HorizontalGroup]:
@@ -98,10 +99,10 @@ class AgentView(View):
     AgentView .stage-head { padding: 0 1; margin-top: 1; text-style: bold; }
     AgentView .stage-head.first { margin-top: 0; }
     AgentView .plan-head { padding: 0 1 0 3; }
-    AgentView .plan-head:hover { background: $boost; }
+    AgentView .plan-head:hover { background: $panel; }
     AgentView .plan-body { height: auto; padding: 0 1 0 5; }
     AgentView .line { height: auto; }
-    AgentView .line .mark { width: 2; }
+    AgentView .line .mark { width: 4; }
     AgentView .line .text { width: 1fr; }
     AgentView .line.gap { margin-top: 1; }
     """
@@ -165,9 +166,9 @@ class AgentView(View):
                 items = plan["items"]
                 done = sum(it["done"] for it in items)
                 colour = "$success" if done == len(items) else "$warning"
-                arrow = "▼" if is_open else "▶"
+                fold = esc("[-]" if is_open else "[+]")
                 widgets.append(PlanHead(
-                    f"[$text-muted]{arrow} {plan['time'][5:16].replace('T', ' ')}[/]  {esc(plan['title'])}"
+                    f"[$frame]{fold}[/] [$text-muted]{plan['time'][5:16].replace('T', ' ')}[/]  {esc(plan['title'])}"
                     f"  [{colour}]{done}/{len(items)}[/]", key))
                 if is_open:
                     lines = [item_line(ctx, it, (sid, plan["time"], i) in self.flash) for i, it in enumerate(items)]

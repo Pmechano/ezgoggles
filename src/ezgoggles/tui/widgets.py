@@ -18,15 +18,15 @@ def motion_on(widget) -> bool:
 class Arrow(Static):
     """The link between two steps of a flow, with the thing that goes through it.
 
-        │  what goes through
-        ▼
+        |  what goes through
+        V
 
     `flow()` sends one dot down the arrow: it shows the direction of the
     data. `fill()` lights the arrow from top to bottom: something arrived.
     With motion off, both end at once and show nothing.
     """
 
-    DEFAULT_CSS = "Arrow { height: auto; color: $text-muted; }"
+    DEFAULT_CSS = "Arrow { height: auto; color: $frame; }"
 
     dot: reactive[float] = reactive(-1.0)
     lit: reactive[float] = reactive(-1.0)
@@ -52,18 +52,18 @@ class Arrow(Static):
 
     def _glyph(self, row: int, glyph: str) -> str:
         if self.dot >= 0 and int(self.dot) == row:
-            return "[b $accent]●[/]"
+            return "[b $accent]*[/]"
         if self.lit >= 0 and self.lit > row:
             return f"[b $accent]{glyph}[/]"
         return glyph
 
     def _draw(self) -> None:
-        text = f"  {esc(self.text)}" if self.text else ""
+        text = f"  [$text-muted]{esc(self.text)}[/]" if self.text else ""
         if self.final:
-            self.update(f"{self._glyph(0, '⇒')}{'  [b $foreground]' + esc(self.text) + '[/]' if self.text else ''}")
+            self.update(f"{self._glyph(0, '=>')}{'  [b $foreground]' + esc(self.text) + '[/]' if self.text else ''}")
             return
-        end = f"  {esc(self.end)}" if self.end else ""
-        self.update(f"{self._glyph(0, '│')}{text}\n{self._glyph(1, '▼')}{end}")
+        end = f"  [$text-muted]{esc(self.end)}[/]" if self.end else ""
+        self.update(f"{self._glyph(0, '|')}{text}\n{self._glyph(1, 'V')}{end}")
 
     def flow(self, delay: float = 0.0) -> None:
         if not motion_on(self):

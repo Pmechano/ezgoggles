@@ -25,7 +25,7 @@ class CodeView(View):
     CodeView #code { height: auto; }
     CodeView .end { padding: 0 1; color: $text-muted; }
     CodeView .step { padding: 0 1; }
-    CodeView Arrow { padding: 0 0 0 2; }
+    CodeView Arrow { padding: 0 0 0 3; }
     CodeView #code-time { color: $text-muted; margin-top: 1; padding: 0 1; }
     """
 

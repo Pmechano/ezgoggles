@@ -1,7 +1,11 @@
-"""Browser-style tabs: a number and a name. A dot marks a tab that is worth a look.
+r"""Tabs in the style of an old terminal: a number and a name. A dot marks a tab worth a look.
 
-The status text is not on the tab. It is the tooltip of the tab, so the bar stays
-short and every word on it has a clear meaning.
+     1 任务  / 2 流程 \  3 代码   4 Agent ●
+    ---------        ---------------------------------
+
+The open tab is in reverse video and has no line under it: it opens into the
+page. The status text is not on the tab. It is the tooltip of the tab, so the
+bar stays short and every word on it has a clear meaning.
 """
 
 from __future__ import annotations
@@ -12,10 +16,11 @@ from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Static
 
+from ..model import width
 from .views.base import Status, esc
 from .widgets import motion_on
 
-DOT = {"new": "$accent", "act": "$warning"}  # quiet statuses show no dot
+DOT = {"new": "$foreground", "act": "$warning"}  # quiet statuses show no dot
 GLINT_TIME = 0.5
 
 
@@ -31,6 +36,7 @@ class Tab(Static):
 
     def __init__(self, key: str, name: str, number: int) -> None:
         super().__init__("", id=f"tab-{key}", classes="tab")
+        self.active = False
         self.key = key
         self.label = name
         self.number = number
@@ -69,8 +75,22 @@ class Tab(Static):
         )
 
     def _draw(self) -> None:
-        dot = f" [{self.dot_colour}]●[/]" if self.dot_colour else ""
-        self.update(f"[dim]{self.number}[/] {self._label_markup()}{dot}")
+        dot = f" [b {self.dot_colour}]●[/]" if self.dot_colour else ""
+        core = f" {self.number} {self._label_markup()}{dot} "
+        cells = width(f" {self.number} {self.label}{' ●' if dot else ''} ")
+        if self.active:
+            # the closing backslash ends the string: before "[/]" it would escape the tag
+            line1 = f"[$frame]/[/][b $background on $accent]{core}[/][$frame]" + "\\"
+            line2 = " " * (cells + 2)
+        else:
+            line1 = f" {core} "
+            line2 = f"[$frame]{'-' * (cells + 2)}[/]"
+        self.update(f"{line1}\n{line2}")
+
+    def set_active(self, on: bool) -> None:
+        self.active = on
+        self.set_class(on, "active")
+        self._draw()
 
     def on_click(self, event: Click) -> None:
         self.post_message(self.Picked(self.key))
@@ -78,23 +98,22 @@ class Tab(Static):
 
 class TabBar(HorizontalGroup):
     DEFAULT_CSS = """
-    TabBar { height: 2; background: $panel; padding: 0 2; }
-    TabBar .tab {
-        width: auto; height: 2; padding: 0 3; margin-right: 1;
-        border-top: tall $panel; background: $surface; color: $text-muted;
-    }
-    TabBar .tab:hover { color: $foreground; background: $boost; }
-    TabBar .tab.active {
-        border-top: tall $accent; background: $background; color: $accent; text-style: bold;
-    }
+    TabBar { height: 2; }
+    TabBar .tab { width: auto; height: 2; color: $text-muted; }
+    TabBar .tab:hover { color: $foreground; }
+    TabBar .rule { width: 1fr; height: 2; color: $frame; text-wrap: nowrap; text-overflow: clip; }
     """
 
     def __init__(self, tabs: list[tuple[str, str]], **kw) -> None:
-        super().__init__(*(Tab(key, name, i + 1) for i, (key, name) in enumerate(tabs)), **kw)
+        super().__init__(
+            *(Tab(key, name, i + 1) for i, (key, name) in enumerate(tabs)),
+            Static("\n" + "-" * 400, classes="rule"),
+            **kw,
+        )
 
     def tab(self, key: str) -> Tab:
         return self.query_one(f"#tab-{key}", Tab)
 
     def activate(self, key: str) -> None:
         for t in self.query(Tab):
-            t.set_class(t.key == key, "active")
+            t.set_active(t.key == key)

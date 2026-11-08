@@ -18,15 +18,15 @@ from ...model import handoff_changed, topo_order, upstream, used_for, width
 from ..widgets import Arrow, motion_on
 from .base import Status, View, esc, map_problem
 
-MARKS = {"merged": ("✓", "$success"), "working": ("◐", "$accent"), "none": ("·", "$text-muted")}
+MARKS = {"merged": ("[x]", "$foreground"), "working": ("[~]", "$accent"), "none": ("[ ]", "$text-muted")}
 
 
 def mark(ctx: Context, sid: str) -> str:
     p = ctx.progress.get(sid)
     if p is None:
-        return " "
+        return "   "
     glyph, colour = MARKS[p.state]
-    return f"[{colour}]{glyph}[/]"
+    return f"[{colour}]{esc(glyph)}[/]"
 
 
 def latest_handoff(ctx: Context) -> str | None:
@@ -52,22 +52,22 @@ def row_markup(ctx: Context, s: dict, selected: bool) -> str:
     you = f"  [b $accent]{esc(ctx.t('flow.you'))}[/]" if s["id"] == ctx.mine else ""
     name = esc(s["name"])
     if not selected:
-        return f"{mark(ctx, s['id'])}  [b]{name}[/]{you}   [$text-muted]{esc(s['does'])}[/]"
+        return f"{mark(ctx, s['id'])} [b] {name} [/]{you}  [$text-muted]{esc(s['does'])}[/]"
     p = ctx.progress.get(s["id"])
     state = f"   [$text-muted]{ctx.t('flow.' + ('empty' if p.state == 'none' else p.state))}[/]" if p else ""
     lines = [
-        f"{mark(ctx, s['id'])}  [b $accent]{name}[/]{you}{state}",
-        f"   {esc(s['does'])}",
+        f"{mark(ctx, s['id'])} [b $background on $accent] {name} [/]{you}{state}",
+        f"     {esc(s['does'])}",
     ]
     if into := goes_into(ctx, s["id"]):
         label = ctx.t("flow.used_for")
-        hang = " " * (3 + width(label) + 2)
-        lines.append(f"   [$text-muted]{label}[/]  {into[0]}")
+        hang = " " * (5 + width(label) + 2)
+        lines.append(f"     [$text-muted]{label}[/]  {into[0]}")
         lines += [hang + more for more in into[1:]]
     if s["id"] == ctx.mine and (change := latest_handoff(ctx)):
-        lines.append(f"   [b $warning]{ctx.t('activity.handoff')}{ctx.t('punct.colon')}{esc(change)}[/]")
+        lines.append(f"     [b $warning]{ctx.t('activity.handoff')}{ctx.t('punct.colon')}{esc(change)}[/]")
     if ctx.user.mode == "learn":
-        lines.append(f"   [$text-muted]{esc(ctx.t('flow.path', path=s['path']))}[/]")
+        lines.append(f"     [$text-muted]{esc(ctx.t('flow.path', path=s['path']))}[/]")
     return "\n".join(lines)
 
 
@@ -91,10 +91,9 @@ class FlowView(View):
     DEFAULT_CSS = """
     FlowView #flow-msg { color: $text-muted; margin-bottom: 1; }
     FlowView #flow { height: auto; }
-    FlowView .stage { padding: 0 1; border-left: thick transparent; }
-    FlowView .stage:hover { background: $boost; }
-    FlowView .stage.selected { border-left: thick $accent; background: $accent 8%; }
-    FlowView Arrow { padding: 0 0 0 2; }
+    FlowView .stage { padding: 0 1; }
+    FlowView .stage:hover { background: $panel; }
+    FlowView Arrow { padding: 0 0 0 6; }
     FlowView #flow-legend { color: $text-muted; margin-top: 1; padding: 0 1; }
     """
 
@@ -173,7 +172,7 @@ class FlowView(View):
         if not ctx.progress:
             return ""
         return "   ".join(
-            f"[{c}]{g}[/] {ctx.t('flow.' + ('empty' if k == 'none' else k))}" for k, (g, c) in MARKS.items()
+            f"[{c}]{esc(g)}[/] {ctx.t('flow.' + ('empty' if k == 'none' else k))}" for k, (g, c) in MARKS.items()
         )
 
     def _arrivals(self, old: Context, new: Context) -> None:

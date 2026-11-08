@@ -58,24 +58,26 @@ class MainScreen(Screen):
 
     def compose(self) -> ComposeResult:
         self._bind_keys()
-        with Vertical(id="chrome"):
-            with Horizontal(id="topbar"):
-                yield Static("", id="brand")
-                yield Static("", id="status")
+        # Frames, as on an old terminal: a title box, the body, the tour strip, the key bar.
+        with Vertical(id="head"):
+            yield Static("", id="brand")
             yield Static("", id="goal")
+        with Vertical(id="body"):
             yield TabBar([(k, self.t(f"view.{k}")) for k in self.keys], id="tabs")
-        yield Static("", id="notice")
-        with VerticalScroll(id="page", can_focus=False):
-            with Vertical(id="views"):
-                for v in self.views:
-                    view = v(id=f"view-{v.key}")
-                    view.display = v.key == self.active
-                    yield view
+            yield Static("", id="notice")
+            with VerticalScroll(id="page", can_focus=False):
+                with Vertical(id="views"):
+                    for v in self.views:
+                        view = v(id=f"view-{v.key}")
+                        view.display = v.key == self.active
+                        yield view
         with Horizontal(id="tour"):
             yield Static("", id="tour-text")
             yield Button("", id="tour-next", classes="tour-btn primary", compact=True, flat=True)
             yield Button(self.t("tour.skip"), id="tour-skip", classes="tour-btn", compact=True, flat=True)
-        yield Footer()
+        with Horizontal(id="bottom"):
+            yield Footer()
+            yield Static("", id="status")
 
     def _bind_keys(self) -> None:
         """Footer labels in the user's language."""
@@ -116,8 +118,7 @@ class MainScreen(Screen):
 
     def _render_head(self, ctx: Context) -> None:
         title = ctx.map["title"] if ctx.map else self.gapp.paths.root.name
-        self.query_one("#brand", Static).update(
-            f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{esc(title)}[/]")
+        self.query_one("#brand", Static).update(f"[$text-muted]EZGOGGLES  -[/]  [b $accent]{esc(title)}[/]")
         goal = self.query_one("#goal", Static)
         goal.display = ctx.map is not None
         goal.update(esc(ctx.map["goal"].strip()) if ctx.map else "")
@@ -126,7 +127,7 @@ class MainScreen(Screen):
             parts.append(esc(ctx.branch))
         if ctx.changed:
             parts.append(ctx.t("status.changed", n=str(ctx.changed)))
-        self.query_one("#status", Static).update("  [$text-muted]·[/]  ".join(parts))
+        self.query_one("#status", Static).update("  [$text-muted]|[/]  ".join(parts))
         notice = self.query_one("#notice", Static)
         notice.display = ctx.translation in ("missing", "stale", "invalid")
         if notice.display:
@@ -228,7 +229,7 @@ class MainScreen(Screen):
         step, total = self.gapp.user.step, len(self.tour)
         key = self.tour[step - 1]
         self.query_one("#tour-text", Static).update(
-            f"[$accent]{self.t('tour.step', n=str(step), total=str(total))}[/]  {self.t(f'tour.{key}')}")
+            f"[b $accent]{self.t('tour.step', n=str(step), total=str(total))}[/]  {self.t(f'tour.{key}')}")
         last = step == total
         self.query_one("#tour-next", Button).label = self.t("tour.start" if last else "tour.next")
         self.query_one("#tour-skip").display = not last
@@ -260,28 +261,30 @@ class GogglesApp(App):
     ENABLE_COMMAND_PALETTE = False
 
     CSS = """
-    Screen { background: $background; }
+    Screen { background: $background; padding: 0 1; }
 
-    #chrome { height: auto; background: $panel; }
-    #topbar { height: 1; padding: 0 2; }
-    #brand { width: auto; }
-    #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
-    #goal { padding: 0 2; color: $text-muted; height: auto; }
-    #tabs { margin-top: 1; }
-    #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
+    #head { height: auto; border: ascii $frame; padding: 0 2; }
+    #brand { width: 100%; text-align: center; }
+    #goal { width: 100%; text-align: center; color: $text-muted; height: auto; }
 
+    #body { height: 1fr; border: ascii $frame; border-top: none; border-bottom: none; padding: 1 2 0 2; }
+    #notice { color: $warning; padding: 0 1; margin-top: 1; height: auto; }
     #page { height: 1fr; align-horizontal: center; scrollbar-size-vertical: 1; }
     #views { width: 100%; max-width: 96; height: auto; padding: 1 2; }
 
-    #tour { height: auto; background: $panel; padding: 0 2; }
+    #tour { height: auto; border: ascii $frame; border-bottom: none; padding: 0 2; }
     #tour-text { width: 1fr; padding: 0 1 0 0; }
     .tour-btn {
         width: auto; min-width: 0; height: 1; margin: 0 0 0 2; padding: 0 2;
         border: none; color: $text-muted; background: transparent;
     }
-    .tour-btn.primary { color: $success; background: $success 15%; text-style: bold; }
-    .tour-btn:hover, .tour-btn:focus { background: $boost; }
-    .tour-btn.primary:hover, .tour-btn.primary:focus { background: $success 30%; }
+    .tour-btn.primary { color: $background; background: $accent; text-style: bold; }
+    .tour-btn:hover, .tour-btn:focus { color: $accent; }
+    .tour-btn.primary:hover, .tour-btn.primary:focus { color: $background; background: $foreground; }
+
+    #bottom { height: 3; border: ascii $frame; padding: 0 1; }
+    #bottom Footer { dock: none; width: 1fr; background: transparent; }
+    #status { width: auto; color: $foreground; }
     """
 
     def __init__(self, paths: Paths) -> None:
@@ -291,6 +294,9 @@ class GogglesApp(App):
         self.watcher = Watcher(paths)
         self.title = f"ezgoggles - {paths.root.name}"
         self._apply_motion()
+
+    def get_theme_variable_defaults(self) -> dict[str, str]:
+        return {"frame": "#b07c26"}  # the colour of the ASCII frames; a theme may set it
 
     def _apply_motion(self) -> None:
         self.animation_level = "full" if self.user.motion else "none"

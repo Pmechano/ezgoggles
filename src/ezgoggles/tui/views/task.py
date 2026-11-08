@@ -42,13 +42,13 @@ class TaskView(View):
     key = "task"
 
     DEFAULT_CSS = """
-    TaskView .row { height: auto; padding: 0 1; border-left: thick transparent; }
-    TaskView .row.mine { border-left: thick $accent; }
-    TaskView .row.head { color: $text-muted; }
+    TaskView .row { height: auto; padding: 0 1; }
+    TaskView .row.head { color: $text-muted; border-bottom: ascii $frame; }
+    TaskView .mark { width: 3; color: $accent; }
     TaskView .what { width: 1fr; }
     TaskView .due { width: 12; }
     TaskView .from { width: 1fr; color: $text-muted; }
-    TaskView .row.mine .what { text-style: bold; }
+    TaskView .row.mine .what { text-style: bold; color: $accent; }
     TaskView #task-rows { height: auto; margin-bottom: 1; }
     TaskView #task-more { padding: 0 1 0 2; }
     """
@@ -70,6 +70,7 @@ class TaskView(View):
             more.update("")
             return
         head = HorizontalGroup(
+            Static("", classes="mark"),
             Static(ctx.t("task.what"), classes="what"),
             Static(ctx.t("task.due"), classes="due"),
             Static(ctx.t("task.from"), classes="from"),
@@ -78,6 +79,7 @@ class TaskView(View):
         lines = [head]
         for d, mine in deliverables(ctx):
             lines.append(HorizontalGroup(
+                Static(">" if mine else "", classes="mark"),
                 Static(esc(d["text"]), classes="what"),
                 Static(short_due(d), classes="due"),
                 Static(esc(made_by(ctx, d)), classes="from"),
@@ -94,11 +96,11 @@ class TaskView(View):
         for group in ("grading", "notes"):
             items = req.get(group) or []
             if items:
-                out.append(f"[b $text-muted]{ctx.t(f'task.{group}')}[/]")
-                out += [f"[$text-muted]·[/] {esc(it)}" for it in items]
+                out.append(f"[$text-muted]// {ctx.t(f'task.{group}')}[/]")
+                out += [f"[$text-muted]-[/] {esc(it)}" for it in items]
                 out.append("")
         if req["sources"]:
-            out.append(f"[$text-muted]{ctx.t('map.sources')} {esc(ctx.t('punct.sep').join(req['sources']))}[/]")
+            out.append(f"[$text-muted]// {ctx.t('map.sources')} {esc(ctx.t('punct.sep').join(req['sources']))}[/]")
         return "\n".join(out).rstrip()
 
     @staticmethod
