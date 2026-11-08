@@ -1,4 +1,8 @@
-"""Browser-style tabs. Each tab shows a view's name and its short status."""
+"""Browser-style tabs: a number and a name. A dot marks a tab that is worth a look.
+
+The status text is not on the tab. It is the tooltip of the tab, so the bar stays
+short and every word on it has a clear meaning.
+"""
 
 from __future__ import annotations
 
@@ -11,13 +15,12 @@ from textual.widgets import Static
 from .views.base import Status, esc
 from .widgets import motion_on
 
-COLOUR = {"quiet": "$text-muted", "new": "$accent", "act": "$warning"}
-SYMBOL = {"quiet": "", "new": "•", "act": "!"}  # narrow screens show only these
+DOT = {"new": "$accent", "act": "$warning"}  # quiet statuses show no dot
 GLINT_TIME = 0.5
 
 
 class Tab(Static):
-    """When the status changes, a glint goes over it once."""
+    """When a dot appears, a glint goes over the tab name once."""
 
     glint: reactive[float] = reactive(-1.0)
 
@@ -26,26 +29,31 @@ class Tab(Static):
             super().__init__()
             self.key = key
 
-    def __init__(self, key: str, name: str) -> None:
+    def __init__(self, key: str, name: str, number: int) -> None:
         super().__init__("", id=f"tab-{key}", classes="tab")
         self.key = key
         self.label = name
+        self.number = number
         self.state: Status | None = None
-        self.narrow = False
         self.shown = False  # no glint for the first status
 
     def on_mount(self) -> None:
         self._draw()
 
     def set_status(self, status: Status | None) -> None:
-        changed = status != self.state and status is not None
+        before = self.dot_colour
         first, self.shown = not self.shown, True
         self.state = status
+        self.tooltip = status.text if status else None
         self._draw()
-        if changed and not first and motion_on(self):
+        if self.dot_colour and self.dot_colour != before and not first and motion_on(self):
             self.glint = 0.0
-            self.animate("glint", float(len(status.text) + 2), duration=GLINT_TIME,
+            self.animate("glint", float(len(self.label) + 2), duration=GLINT_TIME,
                          easing="in_out_sine", on_complete=self._end_glint)
+
+    @property
+    def dot_colour(self) -> str | None:
+        return DOT.get(self.state.level) if self.state else None
 
     def _end_glint(self) -> None:
         self.glint = -1.0
@@ -53,24 +61,16 @@ class Tab(Static):
     def watch_glint(self) -> None:
         self._draw()
 
-    def _status_markup(self) -> str:
-        s = self.state
-        if s is None:
-            return ""
-        colour = COLOUR.get(s.level, COLOUR["quiet"])
-        if self.narrow:
-            sym = SYMBOL.get(s.level, "")
-            return f" [b {colour}]{sym}[/]" if sym else ""
+    def _label_markup(self) -> str:
         if self.glint < 0:
-            return f"  [{colour}]{esc(s.text)}[/]"
-        out = []
-        for i, ch in enumerate(s.text):
-            bright = abs(i - self.glint) < 1.5
-            out.append(f"[b reverse {colour}]{esc(ch)}[/]" if bright else f"[{colour}]{esc(ch)}[/]")
-        return "  " + "".join(out)
+            return esc(self.label)
+        return "".join(
+            f"[reverse]{esc(ch)}[/]" if abs(i - self.glint) < 1.2 else esc(ch) for i, ch in enumerate(self.label)
+        )
 
     def _draw(self) -> None:
-        self.update(f"{esc(self.label)}{self._status_markup()}")
+        dot = f" [{self.dot_colour}]●[/]" if self.dot_colour else ""
+        self.update(f"[dim]{self.number}[/] {self._label_markup()}{dot}")
 
     def on_click(self, event: Click) -> None:
         self.post_message(self.Picked(self.key))
@@ -78,14 +78,19 @@ class Tab(Static):
 
 class TabBar(HorizontalGroup):
     DEFAULT_CSS = """
-    TabBar { height: 1; background: $panel; padding: 0 1; }
-    TabBar .tab { width: auto; padding: 0 2; color: $text-muted; }
+    TabBar { height: 2; background: $panel; padding: 0 2; }
+    TabBar .tab {
+        width: auto; height: 2; padding: 0 3; margin-right: 1;
+        border-top: tall $panel; background: $surface; color: $text-muted;
+    }
     TabBar .tab:hover { color: $foreground; background: $boost; }
-    TabBar .tab.active { background: $background; color: $accent; text-style: bold; }
+    TabBar .tab.active {
+        border-top: tall $accent; background: $background; color: $accent; text-style: bold;
+    }
     """
 
     def __init__(self, tabs: list[tuple[str, str]], **kw) -> None:
-        super().__init__(*(Tab(key, name) for key, name in tabs), **kw)
+        super().__init__(*(Tab(key, name, i + 1) for i, (key, name) in enumerate(tabs)), **kw)
 
     def tab(self, key: str) -> Tab:
         return self.query_one(f"#tab-{key}", Tab)
@@ -93,9 +98,3 @@ class TabBar(HorizontalGroup):
     def activate(self, key: str) -> None:
         for t in self.query(Tab):
             t.set_class(t.key == key, "active")
-
-    def set_narrow(self, narrow: bool) -> None:
-        for t in self.query(Tab):
-            if t.narrow != narrow:
-                t.narrow = narrow
-                t._draw()

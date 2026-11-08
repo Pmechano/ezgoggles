@@ -65,7 +65,7 @@ def row_markup(ctx: Context, s: dict, selected: bool) -> str:
         lines.append(f"   [$text-muted]{label}[/]  {into[0]}")
         lines += [hang + more for more in into[1:]]
     if s["id"] == ctx.mine and (change := latest_handoff(ctx)):
-        lines.append(f"   [b $warning]{ctx.t('tab.handoff')}[/]  {esc(change)}")
+        lines.append(f"   [b $warning]{ctx.t('activity.handoff')}{ctx.t('punct.colon')}{esc(change)}[/]")
     if ctx.user.mode == "learn":
         lines.append(f"   [$text-muted]{esc(ctx.t('flow.path', path=s['path']))}[/]")
     return "\n".join(lines)

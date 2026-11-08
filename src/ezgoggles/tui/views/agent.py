@@ -1,15 +1,22 @@
-"""What the user's agent is doing: its plans, by stage."""
+"""What the user's agent is doing: its plans, by stage.
+
+Every line wraps. A wrapped line stays under its own text, so long items
+read as one block. Click a plan's header to fold or open it.
+"""
 
 from __future__ import annotations
 
-from rich.text import Text
-from textual.theme import Theme
-from textual.widgets import Static, Tree
+from textual.containers import HorizontalGroup, VerticalGroup
+from textual.events import Click
+from textual.message import Message
+from textual.widgets import Static
 
 from ...context import Context
 from ...model import handoff_changed, topo_order
 from ..widgets import motion_on
-from .base import Status, View
+from .base import Status, View, esc
+
+FLASH = 0.8  # seconds that a just-done item stays bright
 
 
 def stage_order(ctx: Context, activity: dict) -> list[str]:
@@ -20,73 +27,6 @@ def stage_order(ctx: Context, activity: dict) -> list[str]:
         keys.remove(ctx.mine)
         keys.insert(0, ctx.mine)
     return keys
-
-
-# Tree labels are Rich Text, which does not know theme variables, so the
-# colours come from the active theme (`pal`). Agent text is never parsed as markup.
-
-
-def palette(theme: Theme | None) -> dict[str, str]:
-    t = theme or Theme(name="fallback", primary="#b8933a")
-    return {
-        "accent": t.accent or t.primary,
-        "success": t.success or "green",
-        "warning": t.warning or "yellow",
-        "secondary": t.secondary or t.primary,
-    }
-
-
-def stage_label(ctx: Context, sid: str, pal: dict[str, str]) -> Text:
-    s = ctx.stage_by_id.get(sid)
-    t = Text(s["name"] if s else sid, style="bold")
-    if sid == ctx.mine:
-        t.append(f"  {ctx.t('activity.you')}", style=f"italic {pal['accent']}")
-    return t
-
-
-def plan_label(plan: dict, pal: dict[str, str]) -> Text:
-    items = plan["items"]
-    done = sum(1 for it in items if it["done"])
-    t = Text(f"{plan['time'][5:16].replace('T', ' ')}  ", style="dim")
-    t.append(plan["title"])
-    t.append(f"  [{done}/{len(items)}]", style=pal["success"] if done == len(items) else pal["warning"])
-    return t
-
-
-def item_label(ctx: Context, item: dict, pal: dict[str, str], flash: bool = False) -> Text:
-    if item["done"] and flash:  # just done: it shows bright for a moment
-        t = Text("✓ ", style=f"bold reverse {pal['success']}")
-        t.append(f" {item['text']}", style=f"bold {pal['success']}")
-    elif item["done"]:
-        t = Text("✓ ", style=pal["success"])
-        t.append(item["text"], style="dim")
-    else:
-        t = Text("○ ", style="dim")
-        t.append(item["text"])
-    if item.get("byUser"):
-        t.append(f"  ({ctx.t('activity.byuser')})", style=f"bold {pal['secondary']}")
-    return t
-
-
-def summary_label(ctx: Context, plan: dict) -> Text | None:
-    if "summary" not in plan:
-        return None
-    t = Text(f"{ctx.t('activity.summary')}{ctx.t('punct.colon')}", style="bold")
-    t.append(plan["summary"])
-    return t
-
-
-def handoff_label(ctx: Context, plan: dict, pal: dict[str, str]) -> Text | None:
-    if "handoffChange" not in plan:
-        return None
-    head = f"{ctx.t('activity.handoff')}{ctx.t('punct.colon')}"
-    if handoff_changed(plan):
-        t = Text(f" {head}", style=f"bold reverse {pal['warning']}")
-        t.append(f" {plan['handoffChange']}", style=f"bold {pal['warning']}")
-        return t
-    t = Text(head, style="bold")
-    t.append(plan["handoffChange"], style="dim")
-    return t
 
 
 def latest_plan(ctx: Context) -> dict | None:
@@ -105,7 +45,48 @@ def done_keys(ctx: Context) -> set[tuple]:
             for p in plans for i, it in enumerate(p["items"]) if it["done"]}
 
 
-FLASH = 0.8  # seconds
+def line(mark: str, text: str, classes: str = "") -> HorizontalGroup:
+    """A mark in its own column, so the text wraps under itself."""
+    return HorizontalGroup(Static(mark, classes="mark"), Static(text, classes="text"), classes=f"line {classes}")
+
+
+def item_line(ctx: Context, item: dict, flash: bool) -> HorizontalGroup:
+    you = f"  [b $secondary]({ctx.t('activity.byuser')})[/]" if item.get("byUser") else ""
+    if item["done"] and flash:
+        return line("[b reverse $success]✓[/]", f"[b $success]{esc(item['text'])}[/]{you}")
+    if item["done"]:
+        return line("[$success]✓[/]", f"[$text-muted]{esc(item['text'])}[/]{you}")
+    return line("[$text-muted]○[/]", f"{esc(item['text'])}{you}")
+
+
+def extra_lines(ctx: Context, plan: dict) -> list[HorizontalGroup]:
+    colon = ctx.t("punct.colon")
+    out = []
+    if "summary" in plan:
+        out.append(line("", f"[b]{ctx.t('activity.summary')}{colon}[/]{esc(plan['summary'])}"))
+    if "handoffChange" in plan:
+        head = f"{ctx.t('activity.handoff')}{colon}"
+        if handoff_changed(plan):
+            out.append(line("", f"[b $warning]{head}{esc(plan['handoffChange'])}[/]"))
+        else:
+            out.append(line("", f"[b]{head}[/][$text-muted]{esc(plan['handoffChange'])}[/]"))
+    if out:
+        out[0].add_class("gap")  # a blank line between the items and the closing notes
+    return out
+
+
+class PlanHead(Static):
+    class Toggled(Message):
+        def __init__(self, key: tuple) -> None:
+            super().__init__()
+            self.key = key
+
+    def __init__(self, text: str, key: tuple) -> None:
+        super().__init__(text, classes="plan-head")
+        self.key = key
+
+    def on_click(self, event: Click) -> None:
+        self.post_message(self.Toggled(self.key))
 
 
 class AgentView(View):
@@ -113,20 +94,27 @@ class AgentView(View):
 
     DEFAULT_CSS = """
     AgentView #activity-msg { padding: 0 1; color: $text-muted; }
-    AgentView Tree { height: auto; background: transparent; padding: 0 1; }
-    AgentView Tree > .tree--guides { color: $foreground 25%; }
+    AgentView #plans { height: auto; }
+    AgentView .stage-head { padding: 0 1; margin-top: 1; text-style: bold; }
+    AgentView .stage-head.first { margin-top: 0; }
+    AgentView .plan-head { padding: 0 1 0 3; }
+    AgentView .plan-head:hover { background: $boost; }
+    AgentView .plan-body { height: auto; padding: 0 1 0 5; }
+    AgentView .line { height: auto; }
+    AgentView .line .mark { width: 2; }
+    AgentView .line .text { width: 1fr; }
+    AgentView .line.gap { margin-top: 1; }
     """
 
     def __init__(self, **kw) -> None:
         super().__init__(**kw)
         self.ctx: Context | None = None
         self.flash: set[tuple] = set()
+        self.open: set[tuple] | None = None  # (stage id, plan time) of the open plans
 
     def compose(self):
         yield Static("", id="activity-msg")
-        tree: Tree[None] = Tree("activity", id="activity")
-        tree.show_root = False
-        yield tree
+        yield VerticalGroup(id="plans")
 
     def update_from(self, ctx: Context) -> None:
         old, self.ctx = self.ctx, ctx
@@ -141,10 +129,18 @@ class AgentView(View):
         if self.ctx is not None:
             self._build(self.ctx)
 
+    def _default_open(self, ctx: Context, activity: dict) -> set[tuple]:
+        """The newest plan of the user's stage, or of every stage when none is picked."""
+        out = set()
+        for sid, plans in activity.items():
+            if plans and (sid == ctx.mine or ctx.mine is None):
+                out.add((sid, plans[-1]["time"]))
+        return out
+
     def _build(self, ctx: Context) -> None:
         msg = self.query_one("#activity-msg", Static)
-        tree = self.query_one("#activity", Tree)
-        tree.clear()
+        box = self.query_one("#plans", VerticalGroup)
+        box.remove_children()
         if not ctx.activity_report.ok:
             msg.update(ctx.t("activity.invalid"))
             msg.display = True
@@ -155,16 +151,34 @@ class AgentView(View):
             msg.display = True
             return
         msg.display = False
-        pal = palette(self.app.current_theme)
-        for sid in stage_order(ctx, activity):
-            snode = tree.root.add(stage_label(ctx, sid, pal), expand=(sid == ctx.mine or ctx.mine is None))
-            for j, plan in enumerate(reversed(activity[sid])):
-                pnode = snode.add(plan_label(plan, pal), expand=(j == 0))
-                for i, it in enumerate(plan["items"]):
-                    pnode.add_leaf(item_label(ctx, it, pal, (sid, plan["time"], i) in self.flash))
-                for extra in (summary_label(ctx, plan), handoff_label(ctx, plan, pal)):
-                    if extra is not None:
-                        pnode.add_leaf(extra)
+        if self.open is None:
+            self.open = self._default_open(ctx, activity)
+        widgets: list = []
+        for n, sid in enumerate(stage_order(ctx, activity)):
+            s = ctx.stage_by_id.get(sid)
+            you = f"  [b $accent]{esc(ctx.t('activity.you'))}[/]" if sid == ctx.mine else ""
+            widgets.append(Static(f"{esc(s['name'] if s else sid)}{you}",
+                                  classes="stage-head first" if n == 0 else "stage-head"))
+            for plan in reversed(activity[sid]):
+                key = (sid, plan["time"])
+                is_open = key in self.open
+                items = plan["items"]
+                done = sum(it["done"] for it in items)
+                colour = "$success" if done == len(items) else "$warning"
+                arrow = "▼" if is_open else "▶"
+                widgets.append(PlanHead(
+                    f"[$text-muted]{arrow} {plan['time'][5:16].replace('T', ' ')}[/]  {esc(plan['title'])}"
+                    f"  [{colour}]{done}/{len(items)}[/]", key))
+                if is_open:
+                    lines = [item_line(ctx, it, (sid, plan["time"], i) in self.flash) for i, it in enumerate(items)]
+                    widgets.append(VerticalGroup(*lines, *extra_lines(ctx, plan), classes="plan-body"))
+        box.mount_all(widgets)
+
+    def on_plan_head_toggled(self, event: PlanHead.Toggled) -> None:
+        if self.open is None or self.ctx is None:
+            return
+        self.open ^= {event.key}
+        self._build(self.ctx)
 
     @staticmethod
     def status(ctx: Context, seen: object) -> Status | None:
@@ -175,4 +189,6 @@ class AgentView(View):
         if any(it.get("byUser") and not it["done"] for it in items):
             return Status(ctx.t("tab.agent_you"), "act")
         done = sum(it["done"] for it in items)
-        return Status(ctx.t("tab.agent_done") if done == len(items) else f"{done}/{len(items)}")
+        if done == len(items):
+            return Status(ctx.t("tab.agent_done"))
+        return Status(ctx.t("tab.agent_progress", done=str(done), total=str(len(items))))

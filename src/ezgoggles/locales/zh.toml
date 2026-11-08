@@ -37,16 +37,18 @@ code = "代码"
 agent = "Agent"
 
 [tab]
-changed = "要求改了"
-days = "还有 {n} 天"
-today = "今天截止"
-handoff = "交接变了"
-upstream = "上游有更新"
-code_new = "已更新"
-code_none = "还没写"
-agent_you = "等你来做"
-agent_done = "完成"
-agent_idle = "空闲"
+# Tooltips of the tabs: full sentences.
+changed = "任务要求改了"
+days = "离最近的截止还有 {n} 天"
+today = "今天有截止"
+handoff = "你这段的交接变了"
+upstream = "上游有新内容合并进 main"
+code_new = "代码流程更新了"
+code_none = "agent 还没写这段的代码流程"
+agent_you = "最新计划里有一项等你来做"
+agent_done = "最新计划已完成"
+agent_idle = "agent 还没有计划"
+agent_progress = "最新计划完成了 {done}/{total} 项"
 
 [tour]
 step = "第 {n}/{total} 步"

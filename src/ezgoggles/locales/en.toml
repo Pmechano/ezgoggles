@@ -36,16 +36,18 @@ code = "Code"
 agent = "Agent"
 
 [tab]
-changed = "changed"
-days = "{n} days left"
-today = "due today"
-handoff = "handoff changed"
-upstream = "upstream updated"
-code_new = "updated"
-code_none = "not written"
-agent_you = "your turn"
-agent_done = "done"
-agent_idle = "idle"
+# Tooltips of the tabs: full sentences.
+changed = "The requirements changed"
+days = "{n} days to the next deadline"
+today = "Something is due today"
+handoff = "The handoff of your stage changed"
+upstream = "New upstream work is on main"
+code_new = "The code flow changed"
+code_none = "The agent has not written the code flow yet"
+agent_you = "The newest plan has an item for you"
+agent_done = "The newest plan is done"
+agent_idle = "The agent has no plan yet"
+agent_progress = "Newest plan: {done} of {total} items done"
 
 [tour]
 step = "Step {n}/{total}"

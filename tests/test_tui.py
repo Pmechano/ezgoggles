@@ -49,7 +49,7 @@ def test_task_view(project):
     assert rows == [("PDF 报告", True), ("预测代码", False), ("答辩", True)]  # by deadline
     assert made_by(ctx, MAP["requirements"]["deliver"][1]) == "数据清洗 · 需求预测"  # data-flow order
     st = TaskView.status(ctx, TaskView.token(ctx), today=date(2026, 12, 18))
-    assert (st.text, st.level) == ("还有 2 天", "quiet")
+    assert (st.text, st.level) == ("离最近的截止还有 2 天", "quiet")
     assert TaskView.status(ctx, "older requirements").level == "act"
 
 
@@ -76,11 +76,11 @@ def test_flow_status_handoff_and_upstream(project):
         "handoffChange": "预测值多了一列置信区间"}]})
     changed = load_context(project, ALICE, "alice/model", progress={"clean": Progress("a1")})
     st = FlowView.status(changed, seen)
-    assert (st.text, st.level) == ("交接变了", "act")
+    assert (st.text, st.level) == ("你这段的交接变了", "act")
     assert "预测值多了一列置信区间" in row_markup(changed, changed.stage_by_id["model"], selected=True)
     project.activity.unlink()
     up = load_context(project, ALICE, "alice/model", progress={"clean": Progress("b2")})
-    assert FlowView.status(up, seen).text == "上游有更新"
+    assert FlowView.status(up, seen).text == "上游有新内容合并进 main"
 
 
 def test_progress_comes_from_git(project):
@@ -104,11 +104,11 @@ def test_code_view_is_for_learning_only():
 
 def test_agent_status(project):
     ctx = load_context(project, ALICE, "alice/clean")
-    assert AgentView.status(ctx, None).text == "空闲"
+    assert AgentView.status(ctx, None).text == "agent 还没有计划"
     write_activity(project)
     ctx = load_context(project, ALICE, "alice/clean")
     st = AgentView.status(ctx, None)
-    assert (st.text, st.level) == ("等你来做", "act")
+    assert (st.text, st.level) == ("最新计划里有一项等你来做", "act")
 
 
 def test_translation_is_used_when_fresh(project):
@@ -181,18 +181,41 @@ async def test_tabs_keys_and_status(project):
         assert s.active == "task"
         await pilot.press("4")
         assert s.active == "agent"
-        await pilot.press("right")  # the tree has focus, but left and right still switch tabs
+        await pilot.press("right")  # wraps around
         assert s.active == "task"
+        tab = s.query_one("#tab-agent")
+        assert "●" not in str(tab.render())
         write_activity(project)
         s.refresh_data(force=True)
         await pilot.pause()
-        tab = s.query_one("#tab-agent")
-        assert "等你来做" in str(tab.render())
+        assert str(tab.render()) == "4 Agent ●"  # name and a dot; the reason is in the tooltip
+        assert tab.tooltip == "最新计划里有一项等你来做"
         await pilot.click("#tab-agent")
-        tree = s.query_one("#view-agent").query_one("Tree")
-        stage = tree.root.children[0]
-        assert "数据清洗" in str(stage.label) and "← 你" in str(stage.label)
-        assert "[1/2]" in str(stage.children[0].label)
+        await pilot.pause()
+        view = s.query_one("#view-agent")
+        heads = [str(w.render()) for w in view.query(".stage-head")]
+        assert heads == ["数据清洗  ← 你"]
+        assert "1/2" in str(view.query_one(".plan-head").render())
+        texts = [str(w.render()) for w in view.query(".plan-body .text")]
+        assert texts[1] == "给填充函数写测试  (你来做)"
+        view.query_one(".plan-head").post_message(view.query_one(".plan-head").Toggled(("clean", "2026-11-07T14:20")))
+        await pilot.pause()
+        assert not view.query(".plan-body")  # folded
+
+
+async def test_long_agent_text_wraps(project):
+    save_user(project, ALICE)
+    long = "很长的一项" * 30
+    write_activity(project, {"clean": [{"time": "2026-11-07T14:20", "title": "t",
+                                         "items": [{"text": long, "done": False}]}]})
+    _git(project, "checkout", "-q", "-b", "alice/clean")
+    app = GogglesApp(project)
+    async with app.run_test(size=(80, 40)) as pilot:
+        await pilot.press("4")
+        await pilot.pause()
+        text = app.screen.query_one("#view-agent .plan-body .text")
+        assert text.size.height > 1 and text.size.width < 80  # wraps instead of scrolling sideways
+        assert app.screen.query_one("#page").max_scroll_x == 0
 
 
 async def test_flow_selection_with_keys_and_mouse(project):
@@ -208,17 +231,6 @@ async def test_flow_selection_with_keys_and_mouse(project):
         assert flow.selected == "report"  # stops at the end
         await pilot.click(".stage")
         assert flow.selected == "clean"
-
-
-async def test_narrow_tabs_show_symbols(project):
-    save_user(project, ALICE)
-    write_activity(project)
-    _git(project, "checkout", "-q", "-b", "alice/clean")
-    app = GogglesApp(project)
-    async with app.run_test(size=(60, 30)) as pilot:
-        await pilot.pause()
-        text = str(app.screen.query_one("#tab-agent").render())
-        assert "!" in text and "等你来做" not in text
 
 
 async def test_language_switch(project):

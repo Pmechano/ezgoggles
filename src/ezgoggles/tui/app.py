@@ -7,7 +7,7 @@ from textual.binding import Binding, BindingsMap
 from textual.css.scalar import ScalarOffset
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Static, Tree
+from textual.widgets import Button, Footer, Static
 
 from .. import i18n
 from ..context import Context, Watcher
@@ -22,7 +22,6 @@ from .views import HOME, VIEWS, View
 from .views.base import esc
 from .widgets import motion_on
 
-NARROW = 72  # columns; below this, tabs show a symbol instead of their status
 POLL = 1.0  # seconds
 SLIDE = 4  # columns that a view slides in from
 SLIDE_TIME = 0.2
@@ -32,7 +31,7 @@ SKIPPED = 99  # user.step when the tour was skipped
 class MainScreen(Screen):
     """Shows the views of VIEWS as tabs. Knows nothing about what a view shows."""
 
-    AUTO_FOCUS = ""  # _enter() gives focus to the open view; a hidden tree must not take it
+    AUTO_FOCUS = ""  # no widget takes the arrow keys; the screen gives them to the open view
 
     def __init__(self) -> None:
         super().__init__()
@@ -81,7 +80,7 @@ class MainScreen(Screen):
     def _bind_keys(self) -> None:
         """Footer labels in the user's language."""
         bindings = [
-            # priority: the agent view's tree must not take left and right
+            # priority: a focused widget must not take left and right
             Binding("left", "tab(-1)", self.t("keys.tabs"), key_display="←→", priority=True),
             Binding("right", "tab(1)", "", show=False, priority=True),
             Binding("up", "move(-1)", "", show=False),
@@ -94,18 +93,11 @@ class MainScreen(Screen):
         self.refresh_bindings()
 
     def on_mount(self) -> None:
-        self._layout(self.app.size.width)
         self.query_one(TabBar).activate(self.active)
         self._draw_tour()
         self.refresh_data(force=True)
         self._enter(self.active)
         self.set_interval(POLL, self.refresh_data)
-
-    def on_resize(self, event) -> None:
-        self._layout(event.size.width)
-
-    def _layout(self, width: int) -> None:
-        self.query_one(TabBar).set_narrow(width < NARROW)
 
     def view(self, key: str) -> View:
         return self.query_one(f"#view-{key}", View)
@@ -211,11 +203,7 @@ class MainScreen(Screen):
         view = self.view(key)
         if self.ctx is not None:
             view.entered(self.ctx, first)
-        trees = view.query(Tree)
-        if trees:
-            trees.first().focus()
-        else:
-            self.set_focus(None)
+        self.set_focus(None)
 
     def action_move(self, delta: int) -> None:
         if not self.view(self.active).move(delta):
