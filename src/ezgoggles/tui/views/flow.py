@@ -14,7 +14,7 @@ from textual.message import Message
 from textual.widgets import Static
 
 from ...context import Context
-from ...model import handoff_changed, topo_order, upstream, used_for
+from ...model import handoff_changed, topo_order, upstream, used_for, width
 from ..widgets import Arrow, motion_on
 from .base import Status, View, esc, map_problem
 
@@ -37,15 +37,15 @@ def latest_handoff(ctx: Context) -> str | None:
     return None
 
 
-def goes_into(ctx: Context, sid: str) -> str:
-    sep = ctx.t("punct.sep")
-    parts = []
+def goes_into(ctx: Context, sid: str) -> list[str]:
+    """One line for each deliverable that the work of `sid` goes into."""
+    out = []
     for d, via in used_for(ctx.map, sid):
         text = esc(d["text"])
         if via is not None:
             text += f"[$text-muted]{esc(ctx.t('flow.via', name=ctx.stage_by_id[via]['name']))}[/]"
-        parts.append(text)
-    return sep.join(parts)
+        out.append(text)
+    return out
 
 
 def row_markup(ctx: Context, s: dict, selected: bool) -> str:
@@ -60,7 +60,10 @@ def row_markup(ctx: Context, s: dict, selected: bool) -> str:
         f"   {esc(s['does'])}",
     ]
     if into := goes_into(ctx, s["id"]):
-        lines.append(f"   [$text-muted]{ctx.t('flow.used_for')}[/]  {into}")
+        label = ctx.t("flow.used_for")
+        hang = " " * (3 + width(label) + 2)
+        lines.append(f"   [$text-muted]{label}[/]  {into[0]}")
+        lines += [hang + more for more in into[1:]]
     if s["id"] == ctx.mine and (change := latest_handoff(ctx)):
         lines.append(f"   [b $warning]{ctx.t('tab.handoff')}[/]  {esc(change)}")
     if ctx.user.mode == "learn":

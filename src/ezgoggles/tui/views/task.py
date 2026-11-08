@@ -88,14 +88,18 @@ class TaskView(View):
 
     @staticmethod
     def more(ctx: Context) -> str:
+        """Grading and notes: one item per line, under a short heading."""
         req = ctx.map["requirements"]
-        sep, colon = ctx.t("punct.sep"), ctx.t("punct.colon")
-        out = [f"[$text-muted]{ctx.t('task.grading')}{colon}[/]{esc(sep.join(req['grading']))}"]
-        for note in req.get("notes") or []:
-            out.append(f"[$text-muted]{ctx.t('task.notes')}{colon}[/]{esc(note)}")
+        out = []
+        for group in ("grading", "notes"):
+            items = req.get(group) or []
+            if items:
+                out.append(f"[b $text-muted]{ctx.t(f'task.{group}')}[/]")
+                out += [f"[$text-muted]·[/] {esc(it)}" for it in items]
+                out.append("")
         if req["sources"]:
-            out.append(f"\n[$text-muted]{ctx.t('map.sources')} {esc(sep.join(req['sources']))}[/]")
-        return "\n".join(out)
+            out.append(f"[$text-muted]{ctx.t('map.sources')} {esc(ctx.t('punct.sep').join(req['sources']))}[/]")
+        return "\n".join(out).rstrip()
 
     @staticmethod
     def token(ctx: Context) -> object:

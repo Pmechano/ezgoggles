@@ -57,7 +57,7 @@ def test_flow_card(project):
     shuffled = dict(MAP, stages=[MAP["stages"][2], MAP["stages"][0], MAP["stages"][1]])
     project.map.write_text(json.dumps(shuffled, ensure_ascii=False), encoding="utf-8")
     ctx = load_context(project, ALICE, "alice/clean")
-    assert goes_into(ctx, "clean") == "PDF 报告[$text-muted]（经 需求预测）[/] · 预测代码 · 答辩[$text-muted]（经 需求预测）[/]"
+    assert goes_into(ctx, "clean") == ["PDF 报告[$text-muted]（经 需求预测）[/]", "预测代码", "答辩[$text-muted]（经 需求预测）[/]"]
     s = ctx.stage_by_id["clean"]
     line = row_markup(ctx, s, selected=False)
     assert "数据清洗" in line and "← 你" in line and "\n" not in line  # one line when not selected
