@@ -32,6 +32,8 @@ def cmd_check(paths: Paths) -> int:
     if ctx.original_map:
         reports += check_translations(paths, ctx.original_map)
     reports.append(ctx.activity_report)
+    if paths.code.exists():
+        reports.append(ctx.code_report)
     for r in reports:
         print_report(paths, r)
     if ctx.original_map:
@@ -121,7 +123,7 @@ def cmd_tui(paths: Paths) -> int:
 COMMANDS: dict[str, tuple[Callable[[Paths], int], str]] = {
     "open": (cmd_open, "start the TUI in a new window if it is not running"),
     "tui": (cmd_tui, "run the TUI in this terminal"),
-    "check": (cmd_check, "validate goggles-data/map.json and activity.json"),
+    "check": (cmd_check, "validate goggles-data/map.json, translations, activity.json and code.json"),
     "init": (cmd_init, "leader setup: goggles-data/ and the entry line"),
 }
 

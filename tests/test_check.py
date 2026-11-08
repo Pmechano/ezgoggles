@@ -136,3 +136,46 @@ def test_check_command_exit_code(project, capsys):
     project.map.write_text("[]", encoding="utf-8")
     assert cmd_check(project) == 1
     assert "ERROR goggles-data/map.json" in capsys.readouterr().out
+
+
+def test_deliverables_link_to_stages(project):
+    m = json.loads(json.dumps(MAP))
+    m["requirements"]["deliver"][0]["from"] = ["ghost"]
+    project.map.write_text(json.dumps(m), encoding="utf-8")
+    r = check_map(project)
+    assert any("deliver/0/from" in e and "ghost" in e for e in r.errors)
+
+
+def test_layers_connect_warnings(project):
+    m = json.loads(json.dumps(MAP))
+    m["stages"][2]["next"] = []
+    m["requirements"]["deliver"] = [{"text": "互评表", "from": []}, {"text": "代码", "from": ["model"]}]
+    project.map.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+    r = check_map(project)
+    assert r.ok
+    assert any("deliver/0" in w and "no stage makes it" in w for w in r.warnings)
+    assert any(w.startswith("stages/report:") for w in r.warnings)
+    assert not any(w.startswith("stages/clean:") for w in r.warnings)  # it reaches `model` through next
+
+
+def test_old_map_format_is_an_error(project):
+    m = json.loads(json.dumps(MAP))
+    m["requirements"]["deliver"] = ["PDF 报告"]
+    m["requirements"]["deadlines"] = ["12 月 20 日"]
+    project.map.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+    r = check_map(project)
+    assert any("deadlines" in e for e in r.errors) and any("deliver/0" in e for e in r.errors)
+
+
+def test_code_flow(project):
+    from conftest import CODE, write_code
+    from ezgoggles.check import check_code
+
+    assert check_code(project, {"model"}).data == {}  # optional file
+    write_code(project)
+    (project.root / "src/model/features.py").write_text("", encoding="utf-8")
+    r = check_code(project, {"clean", "model", "report"})
+    assert r.ok
+    assert r.warnings == ["model/steps/1/file: 'src/model/train.py' does not exist"]
+    write_code(project, {"model": {"time": "2026-11-08T10:00", "steps": []}})
+    assert not check_code(project, None).ok

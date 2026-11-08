@@ -19,44 +19,82 @@ mode_bad = "Select a mode."
 theme = "Theme"
 theme_dark = "Dark"
 theme_light = "Light"
+motion = "Motion"
+sound = "Sound"
+on = "On"
+off = "Off"
 save = "Save"
 
 [mode]
 learn = "Learning"
 deliver = "Delivery"
 
-[panel]
-requirements = "Requirements"
-map = "Project map"
-stage = "My stage"
-activity = "What the agent is doing"
-ack = "I have read this"
+[view]
+task = "Task"
+flow = "Flow"
+code = "Code"
+agent = "Agent"
+
+[tab]
+# Tooltips of the tabs: full sentences.
+changed = "The requirements changed"
+days = "{n} days to the next deadline"
+today = "Something is due today"
+handoff = "The handoff of your stage changed"
+upstream = "New upstream work is on main"
+code_new = "The code flow changed"
+code_none = "The agent has not written the code flow yet"
+agent_you = "The newest plan has an item for you"
+agent_done = "The newest plan is done"
+agent_idle = "The agent has no plan yet"
+agent_progress = "Newest plan: {done} of {total} items done"
+
+[tour]
+step = "Step {n}/{total}"
+next = "Got it, next"
+start = "Start"
+skip = "Skip the tour"
+task = "First, see what to hand in, and when."
+flow = "Next, see the stages of the project, and what each stage gives to the next. Use ↑↓ to see other stages."
+code = "This is the path of the data through the files of your stage."
+agent = "Last, this is what your agent is doing."
 
 [punct]
 colon = ": "
+sep = " · "
+list = ", "
 
 [map]
 missing = "There is no map yet. The leader's agent writes it as `ezgoggles/leader-guide.md` describes."
 invalid = "The map has errors. Ask your agent to run `ezgoggles check` and fix it."
 sources = "Originals"
-goes_to = "Goes to"
 
-[requirements]
-deliver = "What to hand in"
-deadlines = "Deadlines"
+[task]
+what = "What to hand in"
+due = "Due"
+from = "Made by"
+all = "all stages"
 grading = "How it is graded"
 notes = "Note"
 
-[stage]
-take = "You take **{name}**: {does}"
-from = "From **{who}** you get: {what}"
-first = "You start from: {what}"
-to = "You give **{who}**: {what}"
-last = "Final product: {what}"
-where = "Code is in `{path}`"
-detail = "How it works inside"
+[flow]
 you = "← you"
-none = "You have not picked a stage yet. Tell your agent which stage you take. It switches to the right branch for you.\n\nStages: {names}"
+used_for = "Goes into"
+via = " (through {name})"
+goes_to = "Goes to {names}"
+path = "Code is in {path}"
+none = "You have not picked a stage yet. Tell your agent which stage you take. It switches to the right branch for you."
+merged = "on main"
+working = "unmerged work"
+empty = "nothing yet"
+
+[code]
+no_stage = "Pick your stage first. Then this page shows its code."
+missing = "Your agent has not written the code flow of your stage yet. Ask it to read the code and write `goggles-data/.local/code.json`."
+invalid = "`code.json` has errors. Ask the agent to run `ezgoggles check`."
+start = "Starts from"
+end = "Gives out"
+time = "Updated {time}"
 
 [translation]
 missing = "There is no English map yet, so you see the original. Ask your agent to translate it."
@@ -69,11 +107,13 @@ invalid = "`activity.json` has errors. Ask the agent to run `ezgoggles check`."
 byuser = "you do this"
 summary = "Summary"
 handoff = "Handoff change"
+you = "← you"
 
 [status]
 branch = "Branch"
 changed = "{n} uncommitted"
 
 [keys]
+tabs = "Tabs"
 settings = "Settings"
 quit = "Quit"

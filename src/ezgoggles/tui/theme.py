@@ -1,60 +1,72 @@
-"""Brass themes: warm metal accents on quiet backgrounds.
+"""Themes in the style of an old amber terminal.
 
-Colour goes only to frames, titles and highlights. Body text stays plain,
-so the content keeps the reader's attention.
+One hue. Importance shows as brightness: dim for notes, plain for text,
+bright for what is important now. Reverse video marks the one thing that is
+selected. Regions are separated by ASCII frames, not by background fills,
+so the screen stays calm.
 """
 
 from __future__ import annotations
 
 from textual.theme import Theme
 
-BRASS_DARK = Theme(
-    name="ezgoggles-brass-dark",
+
+def _vars(ink: str, dim: str, frame: str, bright: str, back: str) -> dict[str, str]:
+    return {
+        "text-muted": dim,
+        "frame": frame,
+        "footer-background": back,
+        "footer-foreground": ink,
+        "footer-key-foreground": bright,
+        "footer-key-background": back,
+        "footer-description-foreground": ink,
+        "footer-description-background": back,
+        "footer-item-background": back,
+        "block-cursor-background": bright,
+        "block-cursor-foreground": back,
+        "scrollbar": frame,
+        "scrollbar-hover": ink,
+        "scrollbar-active": bright,
+        "scrollbar-background": back,
+        "scrollbar-background-hover": back,
+        "scrollbar-background-active": back,
+        "scrollbar-corner-color": back,
+    }
+
+
+AMBER_DARK = Theme(
+    name="ezgoggles-amber-dark",
     dark=True,
-    background="#16120e",  # walnut black
-    surface="#1d1813",
-    panel="#29211a",
-    foreground="#e6dac2",  # parchment
-    primary="#b8933a",  # brass
-    secondary="#b87333",  # copper
-    accent="#d9b25f",  # polished brass
-    success="#6fa596",  # verdigris
-    warning="#d08c3a",  # amber
-    error="#c0583f",  # rust
-    variables={
-        "footer-key-foreground": "#d9b25f",
-        "block-cursor-background": "#b8933a",
-        "block-cursor-foreground": "#16120e",
-        "scrollbar": "#3a2f22",
-        "scrollbar-hover": "#5a4630",
-        "scrollbar-active": "#b8933a",
-    },
+    background="#0d0a06",  # phosphor black
+    surface="#0d0a06",
+    panel="#1a140b",
+    foreground="#e9a83a",  # amber
+    primary="#e9a83a",
+    secondary="#e9a83a",
+    accent="#ffd24d",  # bright amber: the highlight
+    success="#e9a83a",
+    warning="#ff8a2b",  # hot amber: needs the user
+    error="#ff5a36",
+    variables=_vars(ink="#e9a83a", dim="#8c6526", frame="#b07c26", bright="#ffd24d", back="#0d0a06"),
 )
 
-BRASS_LIGHT = Theme(
-    name="ezgoggles-brass-light",
+AMBER_LIGHT = Theme(
+    name="ezgoggles-amber-light",
     dark=False,
-    background="#f2e9d6",  # aged paper
-    surface="#ebe0c9",
-    panel="#e0d1b2",
-    foreground="#3a2e21",  # sepia ink
-    primary="#8a6a1e",  # dark brass
-    secondary="#8a4f24",  # copper
-    accent="#9c7623",
-    success="#3d7a6b",  # verdigris
-    warning="#a3621b",
-    error="#9a3a25",
-    variables={
-        "footer-key-foreground": "#8a6a1e",
-        "block-cursor-background": "#8a6a1e",
-        "block-cursor-foreground": "#f2e9d6",
-        "scrollbar": "#d6c49f",
-        "scrollbar-hover": "#bfa775",
-        "scrollbar-active": "#8a6a1e",
-    },
+    background="#f3ead7",  # paper
+    surface="#f3ead7",
+    panel="#e6d8bb",
+    foreground="#5a3c12",  # sepia ink
+    primary="#5a3c12",
+    secondary="#5a3c12",
+    accent="#9a5b00",
+    success="#5a3c12",
+    warning="#b8470c",
+    error="#a32a12",
+    variables=_vars(ink="#5a3c12", dim="#9c7f52", frame="#8f6a2e", bright="#9a5b00", back="#f3ead7"),
 )
 
-THEMES = (BRASS_DARK, BRASS_LIGHT)
+THEMES = (AMBER_DARK, AMBER_LIGHT)
 
 # user.json theme -> Textual theme name
-THEME = {"dark": BRASS_DARK.name, "light": BRASS_LIGHT.name}
+THEME = {"dark": AMBER_DARK.name, "light": AMBER_LIGHT.name}

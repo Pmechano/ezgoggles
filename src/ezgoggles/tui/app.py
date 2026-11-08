@@ -1,32 +1,51 @@
-"""The ezgoggles TUI. It shows files. It writes only the user's personal settings."""
+"""The ezgoggles TUI. It shows files. It writes only the user's personal state."""
 
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingsMap
-from textual.containers import Horizontal, VerticalScroll
+from textual.css.scalar import ScalarOffset
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Collapsible, Footer, Static
+from textual.widgets import Button, Footer, Static
 
 from .. import i18n
 from ..context import Context, Watcher
 from ..launch import pidfile
-from ..paths import Paths
+from ..paths import Paths, read_json, write_json
 from ..user import User, load_user, save_user
-from .panels import PANELS, Panel
+from . import sound
 from .setup import SetupScreen
+from .tabs import TabBar
 from .theme import THEME, THEMES
+from .views import HOME, VIEWS, View
+from .views.base import esc
+from .widgets import motion_on
 
-NARROW = 110  # columns; below this the two columns stack into one
 POLL = 1.0  # seconds
+SLIDE = 4  # columns that a view slides in from
+SLIDE_TIME = 0.2
+SKIPPED = 99  # user.step when the tour was skipped
 
 
 class MainScreen(Screen):
-    """Shows the panels of PANELS, opened one by one. Knows nothing about what a panel shows."""
+    """Shows the views of VIEWS as tabs. Knows nothing about what a view shows."""
+
+    AUTO_FOCUS = ""  # no widget takes the arrow keys; the screen gives them to the open view
 
     def __init__(self) -> None:
         super().__init__()
         self.ctx: Context | None = None
+        self.views: list[type[View]] = [v for v in VIEWS if v.shown_for(self.gapp.user)]
+        self.keys = [v.key for v in self.views]
+        self.seen: dict = {}
+        raw = read_json(self.gapp.paths.seen)
+        if isinstance(raw, dict):
+            self.seen = raw
+        self.entered_once: set[str] = set()
+        tour = self.tour
+        self.active = tour[self.gapp.user.step - 1] if self.in_tour else (HOME if HOME in self.keys else self.keys[0])
+        self._act_before: set[str] = set()
 
     @property
     def gapp(self) -> "GogglesApp":
@@ -35,43 +54,55 @@ class MainScreen(Screen):
     def t(self, key: str, **kw: str) -> str:
         return i18n.tr(self.gapp.user.language, key, **kw)
 
+    # ----- layout -----
+
     def compose(self) -> ComposeResult:
         self._bind_keys()
-        with Horizontal(id="topbar"):
-            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.gapp.paths.root.name}[/]", id="brand")
+        # Frames, as on an old terminal: a title box, the body, the tour strip, the key bar.
+        with Vertical(id="head"):
+            yield Static("", id="brand")
+            yield Static("", id="goal")
+        with Vertical(id="body"):
+            yield TabBar([(k, self.t(f"view.{k}")) for k in self.keys], id="tabs")
+            yield Static("", id="notice")
+            with VerticalScroll(id="page", can_focus=False):
+                with Vertical(id="views"):
+                    for v in self.views:
+                        view = v(id=f"view-{v.key}")
+                        view.display = v.key == self.active
+                        yield view
+        with Horizontal(id="tour"):
+            yield Static("", id="tour-text")
+            yield Button("", id="tour-next", classes="tour-btn primary", compact=True, flat=True)
+            yield Button(self.t("tour.skip"), id="tour-skip", classes="tour-btn", compact=True, flat=True)
+        with Horizontal(id="bottom"):
+            yield Footer()
             yield Static("", id="status")
-        yield Static("", id="notice")
-        with Horizontal(id="body"):
-            for column, side in (("main", False), ("side", True)):
-                with VerticalScroll(id=column, classes="col"):
-                    for i, panel in enumerate(PANELS):
-                        if panel.side == side:
-                            yield self._section(i, panel)
-        yield Footer()
 
     def _bind_keys(self) -> None:
         """Footer labels in the user's language."""
-        self._bindings = BindingsMap([
+        bindings = [
+            # priority: a focused widget must not take left and right
+            Binding("left", "tab(-1)", self.t("keys.tabs"), key_display="←→", priority=True),
+            Binding("right", "tab(1)", "", show=False, priority=True),
+            Binding("up", "move(-1)", "", show=False),
+            Binding("down", "move(1)", "", show=False),
             Binding("s", "settings", self.t("keys.settings")),
-            Binding("ctrl+q", "app.quit", self.t("keys.quit")),
-        ])
+            Binding("ctrl+q", "app.quit", self.t("keys.quit"), priority=True),
+        ]
+        bindings += [Binding(str(i + 1), f"go('{k}')", "", show=False) for i, k in enumerate(self.keys)]
+        self._bindings = BindingsMap(bindings)
         self.refresh_bindings()
 
-    def _section(self, i: int, panel: type[Panel]) -> Collapsible:
-        title = f"{i + 1}  {self.t(f'panel.{panel.key}')}"
-        ack = Button(f"✓ {self.t('panel.ack')}", id=f"ack-{i}", classes="ack", compact=True, flat=True)
-        return Collapsible(panel(id=f"panel-{panel.key}"), ack, title=title, collapsed=False, id=f"sec-{i}")
-
     def on_mount(self) -> None:
-        self._layout(self.app.size.width)
+        self.query_one(TabBar).activate(self.active)
+        self._draw_tour()
         self.refresh_data(force=True)
+        self._enter(self.active)
         self.set_interval(POLL, self.refresh_data)
 
-    def on_resize(self, event) -> None:
-        self._layout(event.size.width)
-
-    def _layout(self, width: int) -> None:
-        self.query_one("#body").set_class(width < NARROW, "narrow")
+    def view(self, key: str) -> View:
+        return self.query_one(f"#view-{key}", View)
 
     # ----- data -----
 
@@ -80,52 +111,147 @@ class MainScreen(Screen):
         if ctx is None:
             return
         self.ctx = ctx
-        self._render_status(ctx)
-        for panel in self.query(Panel):
-            panel.update_from(ctx)
-        self._apply_step()
+        self._render_head(ctx)
+        for key in self.keys:
+            self.view(key).update_from(ctx)
+        self._render_tabs(ctx)
 
-    def _render_status(self, ctx: Context) -> None:
+    def _render_head(self, ctx: Context) -> None:
+        title = ctx.map["title"] if ctx.map else self.gapp.paths.root.name
+        self.query_one("#brand", Static).update(f"[$text-muted]EZGOGGLES  -[/]  [b $accent]{esc(title)}[/]")
+        goal = self.query_one("#goal", Static)
+        goal.display = ctx.map is not None
+        goal.update(esc(ctx.map["goal"].strip()) if ctx.map else "")
         parts = [f"[b]{ctx.user.name}[/]", ctx.t(f"mode.{ctx.user.mode}")]
         if ctx.branch:
-            parts.append(f"{ctx.t('status.branch')} {ctx.branch}")
+            parts.append(esc(ctx.branch))
         if ctx.changed:
             parts.append(ctx.t("status.changed", n=str(ctx.changed)))
-        self.query_one("#status", Static).update("  [$text-muted]·[/]  ".join(parts))
+        self.query_one("#status", Static).update("  [$text-muted]|[/]  ".join(parts))
         notice = self.query_one("#notice", Static)
         notice.display = ctx.translation in ("missing", "stale", "invalid")
         if notice.display:
             notice.update(ctx.t(f"translation.{ctx.translation}"))
 
-    # ----- progressive view -----
+    # ----- tab status -----
 
-    def _step(self) -> int:
-        return max(1, min(self.gapp.user.step, len(PANELS)))
+    def _mark_seen(self, key: str) -> None:
+        """The user looks at a view when they open it and when they leave it."""
+        if self.ctx is None:
+            return
+        token = self.view(key).token(self.ctx)
+        if token is not None and self.seen.get(key) != token:
+            self.seen[key] = token
+            write_json(self.gapp.paths.seen, self.seen)
 
-    def _apply_step(self) -> None:
-        step = self._step()
-        last = len(PANELS) - 1
-        for i in range(len(PANELS)):
-            current = i == step - 1 and i < last
-            self.query_one(f"#sec-{i}").display = i < step
-            self.query_one(f"#sec-{i}").set_class(current, "current")
-            self.query_one(f"#ack-{i}").display = current
-        for column, side in (("#main", False), ("#side", True)):
-            self.query_one(column).display = any(p.side == side for p in PANELS[:step])
+    def _render_tabs(self, ctx: Context) -> None:
+        bar = self.query_one(TabBar)
+        dirty = False
+        act = set()
+        for key in self.keys:
+            view = self.view(key)
+            token = view.token(ctx)
+            if token is not None and key not in self.seen:
+                self.seen[key] = token  # the first time, nothing is new
+                dirty = True
+            status = view.status(ctx, self.seen.get(key) if token is not None else None)
+            bar.tab(key).set_status(status)
+            if status is not None and status.level == "act":
+                act.add(key)
+        if dirty:
+            write_json(self.gapp.paths.seen, self.seen)
+        if "flow" in act - self._act_before:
+            sound.cue(self.gapp, "handoff")
+        self._act_before = act
+
+    # ----- switching -----
+
+    def action_tab(self, delta: int) -> None:
+        i = (self.keys.index(self.active) + delta) % len(self.keys)
+        self.switch(self.keys[i])
+
+    def action_go(self, key: str) -> None:
+        self.switch(key)
+
+    def on_tab_picked(self, event) -> None:
+        self.switch(event.key)
+
+    def switch(self, key: str) -> None:
+        if key == self.active or key not in self.keys:
+            return
+        old = self.active
+        self._mark_seen(old)
+        direction = 1 if self.keys.index(key) > self.keys.index(old) else -1
+        self.view(old).display = False
+        new = self.view(key)
+        new.display = True
+        self.active = key
+        self.query_one(TabBar).activate(key)
+        self.query_one("#page", VerticalScroll).scroll_home(animate=False)
+        if motion_on(self):
+            new.styles.offset = (SLIDE * direction, 0)
+            new.styles.opacity = 0.4
+            new.styles.animate("offset", ScalarOffset.from_offset((0, 0)), duration=SLIDE_TIME, easing="out_cubic")
+            new.styles.animate("opacity", 1.0, duration=SLIDE_TIME, easing="out_cubic")
+        self._enter(key)
+        if self.ctx is not None:
+            self._render_tabs(self.ctx)
+
+    def _enter(self, key: str) -> None:
+        self._mark_seen(key)
+        first = self.in_tour and key == self.tour[self.gapp.user.step - 1] and key not in self.entered_once
+        self.entered_once.add(key)
+        view = self.view(key)
+        if self.ctx is not None:
+            view.entered(self.ctx, first)
+        self.set_focus(None)
+
+    def action_move(self, delta: int) -> None:
+        if not self.view(self.active).move(delta):
+            page = self.query_one("#page", VerticalScroll)
+            page.scroll_relative(y=delta * 2, animate=False)
+
+    # ----- tour -----
+
+    @property
+    def tour(self) -> list[str]:
+        return [v.key for v in self.views if v.tour]
+
+    @property
+    def in_tour(self) -> bool:
+        return 1 <= self.gapp.user.step <= len(self.tour)
+
+    def _draw_tour(self) -> None:
+        bar = self.query_one("#tour")
+        bar.display = self.in_tour
+        if not self.in_tour:
+            return
+        step, total = self.gapp.user.step, len(self.tour)
+        key = self.tour[step - 1]
+        self.query_one("#tour-text", Static).update(
+            f"[b $accent]{self.t('tour.step', n=str(step), total=str(total))}[/]  {self.t(f'tour.{key}')}")
+        last = step == total
+        self.query_one("#tour-next", Button).label = self.t("tour.start" if last else "tour.next")
+        self.query_one("#tour-skip").display = not last
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        bid = event.button.id or ""
-        if not bid.startswith("ack-"):
-            return
         user = self.gapp.user
-        step = self._step()
-        if int(bid[4:]) == step - 1 and step < len(PANELS):
-            user.step = step + 1
-            save_user(self.gapp.paths, user)
-            self._apply_step()
-            nxt = self.query_one(f"#sec-{step}", Collapsible)
-            nxt.collapsed = False
-            self.call_after_refresh(nxt.scroll_visible)
+        if event.button.id == "tour-next":
+            if user.step < len(self.tour):
+                user.step += 1
+                nxt = self.tour[user.step - 1]
+            else:
+                user.step = len(self.tour) + 1
+                nxt = HOME
+                sound.cue(self.gapp, "tour_done")
+        elif event.button.id == "tour-skip":
+            user.step = SKIPPED
+            nxt = HOME
+        else:
+            return
+        save_user(self.gapp.paths, user)
+        self._draw_tour()
+        self.switch(nxt if nxt in self.keys else self.keys[0])
 
     def action_settings(self) -> None:
         self.gapp.open_setup(first=False)
@@ -135,36 +261,30 @@ class GogglesApp(App):
     ENABLE_COMMAND_PALETTE = False
 
     CSS = """
-    Screen { background: $background; }
+    Screen { background: $background; padding: 0 1; }
 
-    #topbar { height: 1; padding: 0 2; background: $panel; border-bottom: none; }
-    #brand { width: auto; }
-    #status { width: 1fr; text-align: right; color: $text; margin-left: 4; }
-    #notice { padding: 0 2; margin: 1 2 0 2; border-left: thick $warning; background: $warning 10%; }
+    #head { height: auto; border: ascii $frame; padding: 0 2; }
+    #brand { width: 100%; text-align: center; }
+    #goal { width: 100%; text-align: center; color: $text-muted; height: auto; }
 
-    #body { height: 1fr; padding: 1 1 0 1; }
-    .col { width: 1fr; height: 100%; padding: 0 1; scrollbar-size-vertical: 1; }
-    #body.narrow { layout: vertical; overflow-y: auto; scrollbar-size-vertical: 1; }
-    #body.narrow > .col { width: 100%; height: auto; overflow-y: hidden; }
+    #body { height: 1fr; border: ascii $frame; border-top: none; border-bottom: none; padding: 1 2 0 2; }
+    #notice { color: $warning; padding: 0 1; margin-top: 1; height: auto; }
+    #page { height: 1fr; align-horizontal: center; scrollbar-size-vertical: 1; }
+    #views { width: 100%; max-width: 96; height: auto; padding: 1 2; }
 
-    Collapsible {
-        background: transparent;
-        border: round $primary 35%;
-        padding: 0 1 0 0;
-        margin: 0 0 1 0;
+    #tour { height: auto; border: ascii $frame; border-bottom: none; padding: 0 2; }
+    #tour-text { width: 1fr; padding: 0 1 0 0; }
+    .tour-btn {
+        width: auto; min-width: 0; height: 1; margin: 0 0 0 2; padding: 0 2;
+        border: none; color: $text-muted; background: transparent;
     }
-    Collapsible.current { border: round $accent; }
-    Collapsible > CollapsibleTitle { text-style: bold; padding: 0 1; color: $primary; }
-    Collapsible.current > CollapsibleTitle { color: $accent; }
-    Collapsible > CollapsibleTitle:hover { background: $primary 15%; color: $accent; }
-    Collapsible > Contents { padding: 1 0 0 1; }
+    .tour-btn.primary { color: $background; background: $accent; text-style: bold; }
+    .tour-btn:hover, .tour-btn:focus { color: $accent; }
+    .tour-btn.primary:hover, .tour-btn.primary:focus { color: $background; background: $foreground; }
 
-    Markdown { height: auto; margin: 0; padding: 0 1; background: transparent; }
-    Button.ack {
-        width: auto; min-width: 0; height: 1; margin: 1 0 1 1; padding: 0 2;
-        border: none; color: $success; background: $success 15%; text-style: bold;
-    }
-    Button.ack:hover, Button.ack:focus { background: $success 30%; text-style: bold; }
+    #bottom { height: 3; border: ascii $frame; padding: 0 1; }
+    #bottom Footer { dock: none; width: 1fr; background: transparent; }
+    #status { width: auto; color: $foreground; }
     """
 
     def __init__(self, paths: Paths) -> None:
@@ -173,13 +293,21 @@ class GogglesApp(App):
         self.user = load_user(paths)
         self.watcher = Watcher(paths)
         self.title = f"ezgoggles - {paths.root.name}"
+        self._apply_motion()
+
+    def get_theme_variable_defaults(self) -> dict[str, str]:
+        return {"frame": "#b07c26"}  # the colour of the ASCII frames; a theme may set it
+
+    def _apply_motion(self) -> None:
+        self.animation_level = "full" if self.user.motion else "none"
 
     def on_mount(self) -> None:
         for theme in THEMES:
             self.register_theme(theme)
         self.theme = THEME[self.user.theme]
-        self.push_screen(MainScreen())
-        if not self.user.ready:
+        if self.user.ready:
+            self.push_screen(MainScreen())
+        else:
             self.open_setup(first=True)
 
     def open_setup(self, first: bool) -> None:
@@ -189,16 +317,17 @@ class GogglesApp(App):
             self.user = result
             save_user(self.paths, result)
             self.theme = THEME[result.theme]
-            self.call_later(self._rebuild_main)
+            self._apply_motion()
+            self.call_later(self._show_main)
 
         self.push_screen(SetupScreen(self.user, first), done)
 
-    async def _rebuild_main(self) -> None:
-        screen = self.screen
-        if isinstance(screen, MainScreen):
-            await screen.recompose()
-            screen._layout(self.size.width)
-            screen.refresh_data(force=True)
+    async def _show_main(self) -> None:
+        """A new MainScreen: the language, the mode and so the tabs may have changed."""
+        if isinstance(self.screen, MainScreen):
+            await self.switch_screen(MainScreen())
+        else:
+            await self.push_screen(MainScreen())
 
 
 def run(paths: Paths) -> int:

@@ -1,4 +1,4 @@
-"""The setup page: language, name, mode and theme."""
+"""The setup page: language, name, mode, theme, motion and sound."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from dataclasses import replace
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
+from textual.content import Content
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Static
 
@@ -14,6 +15,15 @@ from .. import i18n
 from ..user import MODES, NAME_RE, THEMES, User
 from .theme import THEME
 
+SWITCHES = ("motion", "sound")  # on/off settings; each is a bool field of User
+
+
+class Choice(RadioButton):
+    """(*) for the chosen one, ( ) for the others: the ASCII style of the main screen."""
+
+    @property
+    def _button(self) -> Content:
+        return Content.styled("(*)" if self.value else "( )", self.get_visual_style("toggle--button"))
 
 
 class SetupScreen(Screen[User]):
@@ -25,7 +35,7 @@ class SetupScreen(Screen[User]):
     SetupScreen { align: center middle; }
     #setup {
         width: 76; max-width: 100%; height: auto; max-height: 100%;
-        padding: 1 3; border: round $accent; background: transparent;
+        padding: 1 3; border: ascii $frame; background: transparent;
     }
     #setup .title { margin-bottom: 0; }
     #setup .subtitle { color: $text-muted; margin-bottom: 1; }
@@ -35,9 +45,17 @@ class SetupScreen(Screen[User]):
     #setup RadioSet:focus { background: $boost; }
     #setup RadioSet.row { layout: horizontal; }
     #setup RadioSet.row RadioButton { width: auto; margin-right: 3; }
-    #setup Input { margin: 0; }
+    #setup Choice { border: none; padding: 0; background: transparent; }
+    #setup Choice > .toggle--button { color: $text-muted; background: transparent; }
+    #setup Choice.-on > .toggle--button { color: $accent; background: transparent; text-style: bold; }
+    #setup Input { margin: 0; border: ascii $frame; background: transparent; }
+    #setup Input:focus { border: ascii $accent; }
     #setup #error { color: $error; height: auto; margin-top: 1; }
-    #setup #save { margin-top: 1; width: auto; min-width: 0; padding: 0 4; text-style: bold; }
+    #setup #save {
+        margin-top: 1; width: auto; min-width: 0; height: 1; padding: 0 4; border: none;
+        color: $background; background: $accent; text-style: bold;
+    }
+    #setup #save:hover, #setup #save:focus { background: $foreground; }
     """
 
     def __init__(self, user: User, first: bool) -> None:
@@ -53,23 +71,28 @@ class SetupScreen(Screen[User]):
     def compose(self) -> ComposeResult:
         d = self.draft
         with VerticalScroll(id="setup"):
-            yield Static(f"[$accent]◉[/] [b $accent]ezgoggles[/]  [$text-muted]│[/]  [b]{self.t('setup.title')}[/]", classes="title")
+            yield Static(f"[$text-muted]EZGOGGLES  -[/]  [b $accent]{self.t('setup.title')}[/]", classes="title")
             yield Static(self.t("setup.subtitle"), classes="subtitle")
             yield Label(self.t("setup.language"), classes="field")
             with RadioSet(id="language", classes="row"):
                 for code in self.languages:
-                    yield RadioButton(i18n.language_name(code), value=d.language == code)
+                    yield Choice(i18n.language_name(code), value=d.language == code)
             yield Label(self.t("setup.name"), classes="field")
             yield Input(value=d.name, placeholder="alice", id="name")
             yield Static(self.t("setup.name_hint"), classes="hint")
             yield Label(self.t("setup.mode"), classes="field")
             with RadioSet(id="mode"):
                 for mode in MODES:
-                    yield RadioButton(self.t(f"setup.mode_{mode}"), value=d.mode == mode)
+                    yield Choice(self.t(f"setup.mode_{mode}"), value=d.mode == mode)
             yield Label(self.t("setup.theme"), classes="field")
             with RadioSet(id="theme", classes="row"):
                 for theme in THEMES:
-                    yield RadioButton(self.t(f"setup.theme_{theme}"), value=d.theme == theme)
+                    yield Choice(self.t(f"setup.theme_{theme}"), value=d.theme == theme)
+            for switch in SWITCHES:
+                yield Label(self.t(f"setup.{switch}"), classes="field")
+                with RadioSet(id=switch, classes="row"):
+                    for on in (True, False):
+                        yield Choice(self.t("setup.on" if on else "setup.off"), value=getattr(d, switch) == on)
             yield Static("", id="error")
             yield Button(self.t("setup.save"), variant="primary", id="save", compact=True)
 
@@ -85,6 +108,8 @@ class SetupScreen(Screen[User]):
         elif group == "theme":
             self.draft.theme = THEMES[event.index]
             self.app.theme = THEME[self.draft.theme]
+        elif group in SWITCHES:
+            setattr(self.draft, group, event.index == 0)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self.draft.name = event.value.strip().lower()

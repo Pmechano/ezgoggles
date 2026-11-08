@@ -42,6 +42,14 @@ class Paths:
         return self.local / "activity.json"
 
     @property
+    def code(self) -> Path:
+        return self.local / "code.json"
+
+    @property
+    def seen(self) -> Path:
+        return self.local / "seen.json"
+
+    @property
     def user(self) -> Path:
         return self.local / "user.json"
 

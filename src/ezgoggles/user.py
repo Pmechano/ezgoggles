@@ -19,7 +19,9 @@ class User:
     mode: str = ""
     language: str = "zh"
     theme: str = "dark"
-    step: int = 1  # how many panels of the progressive view are open
+    step: int = 1  # the step of the first-start tour; past the last step, the tour is done
+    motion: bool = True
+    sound: bool = False  # off by default: members often work in shared rooms
 
     @property
     def ready(self) -> bool:
@@ -40,6 +42,9 @@ def load_user(paths: Paths) -> User:
         user.language = raw["language"]
     if raw.get("theme") in THEMES:
         user.theme = raw["theme"]
+    for key in ("motion", "sound"):
+        if isinstance(raw.get(key), bool):
+            setattr(user, key, raw[key])
     step = raw.get("step")
     if isinstance(step, int) and step >= 1:
         user.step = step

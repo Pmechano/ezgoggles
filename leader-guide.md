@@ -42,8 +42,22 @@ If the project already has work in it, do not move or rename existing files unle
 
 Read all of `docs/`. Then propose a pipeline to the leader, and change it until the leader agrees.
 
-- A stage is also a direction. Usually one member takes one stage. So the number of stages is close to the number of directions the group needs. The team size can be unknown: members can take more than one stage.
+Keep three layers apart. They answer different questions, and different people own them:
+
+| Layer | Question | Owner | In the map |
+|---|---|---|---|
+| Task | What does the course ask for? | the teacher | `requirements` |
+| Solution | How does the group solve it? | the leader and the group | `stages` |
+| Code | How does the program run? | each member's agent | no; see `agent-guide.md` |
+
+The map links the layers. Each deliverable names the stages that make it (`from`). Each stage names its directory (`path`). Members understand the project through these links. At a defense, "why does this stage exist?" has its answer in the task layer.
+
+Cut the stages where the data changes form:
+
+- Do not cut by the parts of the assignment (part 1, part 2). Then the handoffs between stages are not visible.
+- Do not cut by script files. Code changes every day, and the map then becomes out of date.
 - Put the boundary between two stages at a clear handoff: a file, a table or a function that one stage gives to the next.
+- A stage is also a direction. Usually one member takes one stage. So the number of stages is close to the number of directions the group needs. The team size can be unknown: members can take more than one stage.
 - The report or the presentation can be a stage.
 
 ## 4. Make the directories
@@ -71,8 +85,11 @@ Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map
   "goal": "预测各站点下周的骑行需求，并写成报告。",
   "requirements": {
     "sources": ["docs/assignment.pdf", "docs/rubric.pdf"],
-    "deliver": ["预测代码", "PDF 报告（不超过 10 页）"],
-    "deadlines": ["12 月 20 日：提交全部材料"],
+    "deliver": [
+      {"text": "PDF 报告（不超过 10 页）", "due": "2026-12-20", "from": ["report"]},
+      {"text": "预测代码", "due": "2026-12-20", "from": ["clean", "model"]},
+      {"text": "答辩", "due": "2026-12-22 14:00", "from": ["model", "report"]}
+    ],
     "grading": ["模型 40%", "报告 60%"],
     "notes": ["迟交每天扣 10%"]
   },
@@ -84,8 +101,7 @@ Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map
       "path": "src/clean/",
       "input": "原始骑行记录",
       "output": "汇总表",
-      "next": ["model"],
-      "detail": "按站点和小时分组。缺失时段用前后均值填充，因为……"
+      "next": ["model"]
     }
   ]
 }
@@ -93,17 +109,19 @@ Write `goggles-data/map.json`. The schema is `ezgoggles/src/ezgoggles/schema/map
 
 - `language`: `zh` unless the leader says otherwise. Members who read in another language get a translation (see `agent-guide.md`).
 - `goal`: one sentence. What the project makes.
-- `requirements`: key points only, one short line each. `deliver`: what the group hands in. `deadlines`: dates. `grading`: weights. `notes`: rules that a member must not miss. Do not copy the original text. If the materials are incomplete or conflict, put the open point in `notes` and tell the leader.
-- `requirements.sources`: the original files. Readers go there for details.
+- `requirements`: key points only, one short line each. Do not copy the original text. If the materials are incomplete or conflict, put the open point in `notes` and tell the leader.
+  - `deliver`: one item for each thing that the group hands in. A presentation or a defense is a deliverable too. `text` is a short noun phrase. `due` is the deadline (`YYYY-MM-DD`, or `YYYY-MM-DD HH:MM`); leave it out if there is none. `from` lists the stages whose output goes directly into the deliverable. Do not list earlier stages: the TUI finds them through `next`, and shows "PDF 报告（经 需求预测）" to a member of an earlier stage.
+  - `grading`: weights. `notes`: rules that a member must not miss.
+  - `sources`: the original files. Readers go there for details.
 - `id`: lowercase ASCII. Members' branch names use it.
 - `name`: a short name that a person says, not a file name.
 - `does`: one short sentence. What the stage does.
-- `input` and `output`: a short noun phrase each, for example "汇总表". Put exact formats (columns, fields, function signatures) in a file in the stage directory. If a handoff file is too big for git, write where members get it in that file.
-- `detail`: how the stage works inside, and why. Only learning mode shows it, folded.
+- `input` and `output`: a short noun phrase each, for example "汇总表". The TUI shows the output on the arrow to the next stage. Put exact formats (columns, fields, function signatures) in a file in the stage directory. If a handoff file is too big for git, write where members get it in that file.
+- `path`: the stage directory. It links the stage to its code, and it limits what an agent changes.
 
 Write for a reader who is new to the project: use the words of the course, not code names, and keep each list short. `check` warns when a text is long for a reader.
 
-Then run `check` until it prints `OK`. `check` validates the structure and warns about long text. It does not check that the key points are correct, so compare them with the originals yourself. Then run `open`, and ask the leader to read the map in the TUI.
+Then run `check` until it prints `OK`. `check` validates the structure and the links between the layers, and warns about long text and about a stage whose output goes into no deliverable. It does not check that the key points are correct, so compare them with the originals yourself. Then run `open`, and ask the leader to read the map in the TUI.
 
 ## 6. Publish
 

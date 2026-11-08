@@ -5,7 +5,13 @@
   "description": "The project map, written for members to read and understand. The original course materials stay in docs/. A translation (goggles-data/translations/map.<language>.json) uses the same schema and also sets `source`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["language", "title", "goal", "requirements", "stages"],
+  "required": [
+    "language",
+    "title",
+    "goal",
+    "requirements",
+    "stages"
+  ],
   "properties": {
     "language": {
       "type": "string",
@@ -29,34 +35,69 @@
     "requirements": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sources", "deliver", "grading"],
-      "description": "Key points only. Each item is one short line.",
+      "required": [
+        "sources",
+        "deliver",
+        "grading"
+      ],
+      "description": "The task layer: what the course asks for. Key points only.",
       "properties": {
         "sources": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Paths of the original course materials, relative to the project root."
         },
         "deliver": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "minLength": 1 },
-          "description": "What the group hands in."
-        },
-        "deadlines": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "description": "Dates and what is due on each."
+          "description": "What the group hands in, one item per deliverable. A presentation or a defense is a deliverable too.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "from"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A short noun phrase: what to hand in."
+              },
+              "due": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}( \\d{2}:\\d{2})?$",
+                "description": "Deadline as YYYY-MM-DD, or YYYY-MM-DD HH:MM. Leave it out if there is none."
+              },
+              "from": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                },
+                "description": "Ids of the stages whose output goes directly into this deliverable. Earlier stages are found through `next`."
+              }
+            }
+          }
         },
         "grading": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "How the work is graded, with weights."
         },
         "notes": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Other rules that a member must not miss."
         }
       }
@@ -64,11 +105,19 @@
     "stages": {
       "type": "array",
       "minItems": 1,
-      "description": "The pipeline stages. Each stage is also one direction that a member can take.",
+      "description": "The solution layer: how the group solves the task, as a data flow. Cut stages where the data changes form, not by assignment parts and not by script files. Each stage is also one direction that a member can take.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "does", "path", "input", "output", "next"],
+        "required": [
+          "id",
+          "name",
+          "does",
+          "path",
+          "input",
+          "output",
+          "next"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -88,7 +137,7 @@
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "Directory of this stage, relative to the project root."
+            "description": "Directory of this stage, relative to the project root. It links the stage to its code, and it limits what an agent changes. The TUI shows it only in learning mode."
           },
           "input": {
             "type": "string",
@@ -102,12 +151,11 @@
           },
           "next": {
             "type": "array",
-            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*$"
+            },
             "description": "Ids of the stages that take this stage's output. Empty for the last stage."
-          },
-          "detail": {
-            "type": "string",
-            "description": "How the stage works inside, and why. Markdown. Shown only in learning mode, folded."
           }
         }
       }
